@@ -62,10 +62,6 @@ function get_snake_orientation(req) {
   }
 }
 
-function get_snake_reverse_orientation(req) {
-  return moves[(moves.indexOf(get_snake_orientation(req)) + 2) % 4]
-}
-
 function shuffle_array(arr) {
   var i, j, temp
   for (i = arr.length - 1; i > 0; i--) {
@@ -83,6 +79,7 @@ function stringify(x, y) {
 
 function get_obstacles_coord(req) {
   var coord = {}
+
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
@@ -90,6 +87,18 @@ function get_obstacles_coord(req) {
       coord[stringify(snake_body[i].x, snake_body[i].y)] = stringify(snake_body[i+1].x, snake_body[i+1].y)
     }
   }
+
+  var x_max = req.body.board.width - 1
+  var y_max = req.body.board.height - 1
+  for (var i = 0; i < x_max; i++) {
+    coord[stringify(i, -1)] = "wall" // Top wall
+    coord[stringify(i, y_max)] = "wall" // Bottom wall
+  }
+  for (var i = 0; i < y_max; i++) {
+    coord[stringify(-1, i)] = "wall" // Left wall
+    coord[stringify(x_max, i)] = "wall" // Right wall
+  }
+
   console.log(coord)
   return coord
 }
@@ -101,16 +110,12 @@ function is_obstacle(future_pos, obstacles_coord) {
 function is_legal_move(req, obstacles_coord, move) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
-  var x_max = req.body.board.width - 1
-  var y_max = req.body.board.height - 1
-  var reversed_orientation = get_snake_reverse_orientation(req)
 
-  // Make sure it doesn't eat itself, bump into walls, and collide with obstacles
-  return !((reversed_orientation == move) ||
-      (move == "up" && (y_head - 1 < 0 || is_obstacle([x_head, y_head - 1], obstacles_coord))) ||
-      (move == "left" && (x_head - 1 < 0 || is_obstacle([x_head - 1, y_head], obstacles_coord))) ||
-      (move == "down" && (y_head + 1 > y_max || is_obstacle([x_head, y_head + 1], obstacles_coord))) ||
-      (move == "right" && (x_head + 1 > x_max || is_obstacle([x_head + 1, y_head], obstacles_coord))))
+  // Make sure it doesn't eat itself and collide with obstacles
+  return !((move == "up" && is_obstacle([x_head, y_head - 1], obstacles_coord)) ||
+      (move == "left" && is_obstacle([x_head - 1, y_head], obstacles_coord)) ||
+      (move == "down" && is_obstacle([x_head, y_head + 1], obstacles_coord)) ||
+      (move == "right" && is_obstacle([x_head + 1, y_head], obstacles_coord)))
 }
 
 function local_space_score(req, obstacles_coord, move) {
