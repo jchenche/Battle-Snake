@@ -83,13 +83,13 @@ function get_obstacles_coord(req) {
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
-    for (var i = 0; i < snake_body.length - 1; i++) { // Tail will be gone unless the snake ate
+    for (var i = 0; i < snake_body.length - 1; i++) { // Tail will be gone unless the snake ate and grew
       coord[stringify(snake_body[i].x, snake_body[i].y)] = stringify(snake_body[i+1].x, snake_body[i+1].y)
     }
   }
 
-  var x_max = req.body.board.width - 1
-  var y_max = req.body.board.height - 1
+  var x_max = req.body.board.width
+  var y_max = req.body.board.height
   for (var i = 0; i < x_max; i++) {
     coord[stringify(i, -1)] = "wall" // Top wall
     coord[stringify(i, y_max)] = "wall" // Bottom wall
@@ -99,43 +99,72 @@ function get_obstacles_coord(req) {
     coord[stringify(x_max, i)] = "wall" // Right wall
   }
 
-  console.log(coord)
   return coord
 }
 
-function is_obstacle(future_pos, obstacles_coord) {
-  return stringify(future_pos[0], future_pos[1]) in obstacles_coord
-}
-
 function is_legal_move(req, obstacles_coord, move) {
+  // Make sure it doesn't eat itself and collide with obstacles
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
 
-  // Make sure it doesn't eat itself and collide with obstacles
-  return !((move == "up" && is_obstacle([x_head, y_head - 1], obstacles_coord)) ||
-      (move == "left" && is_obstacle([x_head - 1, y_head], obstacles_coord)) ||
-      (move == "down" && is_obstacle([x_head, y_head + 1], obstacles_coord)) ||
-      (move == "right" && is_obstacle([x_head + 1, y_head], obstacles_coord)))
+  var future_pos
+  if (move == "up") future_pos = [x_head, y_head - 1]
+  else if (move == "left") future_pos = [x_head - 1, y_head]
+  else if (move == "down") future_pos = [x_head, y_head + 1]
+  else future_pos = [x_head + 1, y_head]
+
+  return !(stringify(future_pos[0], future_pos[1]) in obstacles_coord)
 }
 
 function local_space_score(req, obstacles_coord, move) {
-  var seen = {}
+  // Assign score to moves based on the # of available spots locally
+  var score = 4
+  var x_head = req.body.you.body[0].x
+  var y_head = req.body.you.body[0].y
+
+  var future_pos
+  if (move == "up") future_pos = [x_head, y_head - 1]
+  else if (move == "left") future_pos = [x_head - 1, y_head]
+  else if (move == "down") future_pos = [x_head, y_head + 1]
+  else future_pos = [x_head + 1, y_head]
+
+  var north_of_future = [future_pos[0], future_pos[1] - 1]
+  var west_of_future = [future_pos[0] - 1, future_pos[1]]
+  var south_of_future = [future_pos[0], future_pos[1] + 1]
+  var east_of_future =[future_pos[0] + 1, future_pos[1]]
+
+  if (stringify(north_of_future[0], north_of_future[1]) in obstacles_coord) score -= 1
+  if (stringify(west_of_future[0], west_of_future[1]) in obstacles_coord) score -= 1
+  if (stringify(south_of_future[0], south_of_future[1]) in obstacles_coord) score -= 1
+  if (stringify(east_of_future[0], east_of_future[1]) in obstacles_coord) score -= 1
+
+  return score
+}
+
+function global_space_score(req, obstacles_coord, move) {
+  var score = 0
 
 
-  return 0
+
+  return score
 }
 
 function get_best_move(req, obstacles_coord) {
   var move_rankings = shuffle_array(["up", "left", "down", "right"])
   move_rankings = move_rankings.map(move => [move, 0])
   move_rankings = move_rankings.filter(move => is_legal_move(req, obstacles_coord, move[0]))
-  if (move_rankings.length == 0) return "up" // Doomed anyways
+  if (move_rankings.length == 0) {
+    console.log("====== No legal moves available ======")
+    return "up"
+  }
   
   move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
+  
+  move_rankings = move_rankings.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, move[0])])
 
-
-  move_rankings.sort((a, b) => a[1] - b[1])
-  return move_rankings[0][0] // Best move
+  move_rankings.sort((a, b) => b[1] - a[1])
+  console.log("Turn: " + req.body.turn + ". Move rankings ======> " + move_rankings)
+  return move_rankings[0][0] // Move with the highest score
 }
 
 // Handle POST request to '/move'
