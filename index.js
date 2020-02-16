@@ -62,18 +62,42 @@ function get_snake_reverse_orientation(req) {
   return directions[(directions.indexOf(get_snake_orientation(req)) + 2) % 4]
 }
 
-function avoid_wall(req, data) {
+function avoid_getting_inside_itself() {
+
+}
+
+function get_obstacles_coord(req) {
+  var coord = []
+  var snakes = req.body.board.snakes
+  for (let snake of snakes) {
+    var snake_body = snake.body
+    for (let elem of snake_body) {
+      coord.push([elem.x, elem.y])
+    }
+  }
+  return coord
+}
+
+function is_obstacle(future_pos, obstacles_coord) {
+  for (let elem of obstacles_coord) {
+    if (future_pos[0] == elem[0] && future_pos[1] == elem[1]) return true
+  }
+  return false
+}
+
+function avoid_obstacle(req, data, obstacles_coord) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
   var x_max = req.body.board.width - 1
   var y_max = req.body.board.height - 1
   var reversed_orientation = get_snake_reverse_orientation(req)
 
-  while ((reversed_orientation == data.move) || // Make sure it doesn't collide itself
-      (data.move == "up" && y_head - 1 < 0) ||
-      (data.move == "left" && x_head - 1 < 0) ||
-      (data.move == "down" && y_head + 1 > y_max) ||
-      (data.move == "right" && x_head + 1 > x_max)) {
+  // Make sure it doesn't eat itself, bump into walls, and collide with obstacles
+  while ((reversed_orientation == data.move) ||
+      (data.move == "up" && y_head - 1 < 0 && !is_obstacle([x_head, y_head - 1], obstacles_coord)) ||
+      (data.move == "left" && x_head - 1 < 0 && !is_obstacle([x_head - 1, y_head], obstacles_coord)) ||
+      (data.move == "down" && y_head + 1 > y_max && !is_obstacle([x_head, y_head + 1], obstacles_coord)) ||
+      (data.move == "right" && x_head + 1 > x_max) && !is_obstacle([x_head + 1, y_head], obstacles_coord)) {
     data.move = get_random_direction()
   }
 }
@@ -87,7 +111,11 @@ app.post('/move', (req, res) => {
     move: get_random_direction(), // coordinate (0,0) is at the upper left corner
   }
 
-  avoid_wall(req, data)
+  var obstacles_coord = get_obstacles_coord(req)
+
+  avoid_getting_inside_itself()
+
+  avoid_obstacle(req, data, obstacles_coord)
 
   return res.json(data)
 })
