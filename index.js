@@ -77,13 +77,17 @@ function shuffle_array(arr) {
   return arr
 }
 
+function stringify(x, y) {
+  return x.toString() + "," + y.toString()
+}
+
 function get_obstacles_coord(req) {
-  var coord = []
+  var coord = {}
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
-    for (var i = 0; i < snake_body.length - 1; i++) {
-      coord.push([snake_body[i].x, snake_body[i].y])
+    for (var i = 0; i < snake_body.length - 1; i++) { // Tail will be gone unless the snake ate
+      coord[stringify(snake_body[i].x, snake_body[i].y)] = stringify(snake_body[i+1].x, snake_body[i+1].y)
     }
   }
   console.log(coord)
@@ -91,10 +95,7 @@ function get_obstacles_coord(req) {
 }
 
 function is_obstacle(future_pos, obstacles_coord) {
-  for (let elem of obstacles_coord) {
-    if (future_pos[0] == elem[0] && future_pos[1] == elem[1]) return true
-  }
-  return false
+  return stringify(future_pos[0], future_pos[1]) in obstacles_coord
 }
 
 function is_legal_move(req, obstacles_coord, move) {
@@ -112,12 +113,20 @@ function is_legal_move(req, obstacles_coord, move) {
       (move == "right" && (x_head + 1 > x_max || is_obstacle([x_head + 1, y_head], obstacles_coord))))
 }
 
+function local_space_score(req, obstacles_coord, move) {
+  var seen = {}
+
+
+  return 0
+}
+
 function get_best_move(req, obstacles_coord) {
   var move_rankings = shuffle_array(["up", "left", "down", "right"])
-  move_rankings = move_rankings.map((move, index) => [move, index])
+  move_rankings = move_rankings.map(move => [move, 0])
   move_rankings = move_rankings.filter(move => is_legal_move(req, obstacles_coord, move[0]))
   if (move_rankings.length == 0) return "up" // Doomed anyways
   
+  move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
 
 
   move_rankings.sort((a, b) => a[1] - b[1])
