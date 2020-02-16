@@ -35,10 +35,14 @@ app.post('/start', (request, response) => {
   return response.json(data)
 })
 
-var directions = ["up", "left", "down", "right"] // Code depends on the order of array
+var moves = ["up", "left", "down", "right"] // Code depends on the order of array
 
-function get_random_direction() {
-  return directions[Math.floor(Math.random() * 4)]
+function get_random_new_move(old_move) {
+  var new_move = ""
+  do {
+    new_move = moves[Math.floor(Math.random() * 4)]
+  } while (new_move == old_move)
+  return new_move
 }
 
 function get_snake_orientation(req) {  
@@ -59,11 +63,27 @@ function get_snake_orientation(req) {
 }
 
 function get_snake_reverse_orientation(req) {
-  return directions[(directions.indexOf(get_snake_orientation(req)) + 2) % 4]
+  return moves[(moves.indexOf(get_snake_orientation(req)) + 2) % 4]
 }
 
-function avoid_getting_inside_itself() {
+function shuffle_array(arr) {
+  var i, j, temp
+  for (i = arr.length - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1))
+      temp = arr[i]
+      arr[i] = arr[j]
+      arr[j] = temp
+  }
+  return arr
+}
 
+function get_best_move(req, obstacles_coord) {
+  var initial_moves = shuffle_array(["up", "left", "down", "right"])
+  var legal_moves = initial_moves.filter(move => is_legal_move(req, obstacles_coord, move))
+
+
+  if (legal_moves.length == 0) return "up" // Doomed
+  return legal_moves[0]
 }
 
 function get_obstacles_coord(req) {
@@ -71,10 +91,11 @@ function get_obstacles_coord(req) {
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
-    for (let elem of snake_body) {
-      coord.push([elem.x, elem.y])
+    for (var i = 0; i < snake_body.length - 1; i++) {
+      coord.push([snake_body[i].x, snake_body[i].y])
     }
   }
+  console.log(coord)
   return coord
 }
 
@@ -85,7 +106,7 @@ function is_obstacle(future_pos, obstacles_coord) {
   return false
 }
 
-function avoid_obstacle(req, data, obstacles_coord) {
+function is_legal_move(req, obstacles_coord, move) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
   var x_max = req.body.board.width - 1
@@ -93,13 +114,11 @@ function avoid_obstacle(req, data, obstacles_coord) {
   var reversed_orientation = get_snake_reverse_orientation(req)
 
   // Make sure it doesn't eat itself, bump into walls, and collide with obstacles
-  while ((reversed_orientation == data.move) ||
-      (data.move == "up" && y_head - 1 < 0 && !is_obstacle([x_head, y_head - 1], obstacles_coord)) ||
-      (data.move == "left" && x_head - 1 < 0 && !is_obstacle([x_head - 1, y_head], obstacles_coord)) ||
-      (data.move == "down" && y_head + 1 > y_max && !is_obstacle([x_head, y_head + 1], obstacles_coord)) ||
-      (data.move == "right" && x_head + 1 > x_max) && !is_obstacle([x_head + 1, y_head], obstacles_coord)) {
-    data.move = get_random_direction()
-  }
+  return !((reversed_orientation == move) ||
+      (move == "up" && (y_head - 1 < 0 || is_obstacle([x_head, y_head - 1], obstacles_coord))) ||
+      (move == "left" && (x_head - 1 < 0 || is_obstacle([x_head - 1, y_head], obstacles_coord))) ||
+      (move == "down" && (y_head + 1 > y_max || is_obstacle([x_head, y_head + 1], obstacles_coord))) ||
+      (move == "right" && (x_head + 1 > x_max || is_obstacle([x_head + 1, y_head], obstacles_coord))))
 }
 
 // Handle POST request to '/move'
@@ -108,14 +127,12 @@ app.post('/move', (req, res) => {
 
   // Response data
   const data = {
-    move: get_random_direction(), // coordinate (0,0) is at the upper left corner
+    move: "up", // coordinate (0,0) is at the upper left corner
   }
 
   var obstacles_coord = get_obstacles_coord(req)
 
-  avoid_getting_inside_itself()
-
-  avoid_obstacle(req, data, obstacles_coord)
+  data.move = get_best_move(req, obstacles_coord)
 
   return res.json(data)
 })
