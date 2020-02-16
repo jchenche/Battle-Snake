@@ -77,15 +77,6 @@ function shuffle_array(arr) {
   return arr
 }
 
-function get_best_move(req, obstacles_coord) {
-  var initial_moves = shuffle_array(["up", "left", "down", "right"])
-  var legal_moves = initial_moves.filter(move => is_legal_move(req, obstacles_coord, move))
-
-
-  if (legal_moves.length == 0) return "up" // Doomed
-  return legal_moves[0]
-}
-
 function get_obstacles_coord(req) {
   var coord = []
   var snakes = req.body.board.snakes
@@ -119,6 +110,18 @@ function is_legal_move(req, obstacles_coord, move) {
       (move == "left" && (x_head - 1 < 0 || is_obstacle([x_head - 1, y_head], obstacles_coord))) ||
       (move == "down" && (y_head + 1 > y_max || is_obstacle([x_head, y_head + 1], obstacles_coord))) ||
       (move == "right" && (x_head + 1 > x_max || is_obstacle([x_head + 1, y_head], obstacles_coord))))
+}
+
+function get_best_move(req, obstacles_coord) {
+  var move_rankings = shuffle_array(["up", "left", "down", "right"])
+  move_rankings = move_rankings.map((move, index) => [move, index])
+  move_rankings = move_rankings.filter(move => is_legal_move(req, obstacles_coord, move[0]))
+  if (move_rankings.length == 0) return "up" // Doomed anyways
+  
+
+
+  move_rankings.sort((a, b) => a[1] - b[1])
+  return move_rankings[0][0] // Best move
 }
 
 // Handle POST request to '/move'
