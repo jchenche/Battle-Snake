@@ -36,7 +36,7 @@ app.post('/start', (request, response) => {
 })
 
 const WIDER_SEARCH_LIMIT = 2
-const HEALTH_THRESHOLD = 15
+const HEALTH_THRESHOLD = 25
 
 function shuffle_array(arr) {
   var i, j, temp
@@ -101,18 +101,23 @@ function is_legal_move(req, obstacles_coord, move) {
 
 function transform_score(enemy_length, my_length, score) {
   if (typeof enemy_length == "number") { // It's a snake head
-    if (enemy_length >= my_length) score -= 4
-    else if (enemy_length < my_length) score += 1
+    if (enemy_length >= my_length) score -= 5
+    else if (enemy_length < my_length) score += 3
 
   } else {
-    score -= 3
+    score -= 4
   }
   return score
 }
 
+function transform_food_score(health, score) {
+  if (health > HEALTH_THRESHOLD) score -= 1
+  else score += 1
+  return score
+}
+
 function local_space_score(req, obstacles_coord, move) {
-  // Assign score to moves based on the # of available spots locally
-  var score = 12
+  var score = 16
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
 
@@ -150,16 +155,14 @@ function local_space_score(req, obstacles_coord, move) {
 
   var food_spot = {}
   var health = req.body.you.health
-  if (health > HEALTH_THRESHOLD) {
-    var foods = req.body.board.food
-    for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
-  }
+  var foods = req.body.board.food
+  for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
 
   // food_spot is mutually exclusive with obstacles_coord
-  if (stringify(north_of_future) in food_spot) score -= 1
-  if (stringify(west_of_future) in food_spot) score -= 1
-  if (stringify(south_of_future) in food_spot) score -= 1
-  if (stringify(east_of_future) in food_spot) score -= 1
+  if (stringify(north_of_future) in food_spot) score = transform_food_score(health, score)
+  if (stringify(west_of_future) in food_spot) score = transform_food_score(health, score)
+  if (stringify(south_of_future) in food_spot) score = transform_food_score(health, score)
+  if (stringify(east_of_future) in food_spot) score = transform_food_score(health, score)
 
   return score
 }
