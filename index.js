@@ -102,11 +102,11 @@ function is_legal_move(req, obstacles_coord, move) {
 
 function transform_score(enemy_length, my_length, score) {
   if (typeof enemy_length == "number") { // type number means it's a snake head
-    if (enemy_length >= my_length) score -= 5
-    else if (enemy_length < my_length) score += 3
+    if (enemy_length >= my_length) score -= 6
+    else if (enemy_length < my_length) score += 2
 
   } else {
-    score -= 4
+    score -= 3
   }
   return score
 }
@@ -168,11 +168,14 @@ function local_space_score(req, obstacles_coord, move) {
   return score
 }
 
-function limited_BFS(queue, marked, obstacles_coord, score) {
-  score.s += 1
+function limited_BFS(queue, marked, obstacles_coord, food_spot, score) {
   var curr = queue.shift()
   var curr_coord = curr[0]
   var curr_depth = curr[1]
+
+  score.s += 1
+  if (stringify(curr_coord) in food_spot) score.s += 1
+
   if (curr_depth <= 0) return
 
   var north_of_curr = [curr_coord[0], curr_coord[1] - 1]
@@ -189,7 +192,7 @@ function limited_BFS(queue, marked, obstacles_coord, score) {
     }
   }
 
-  if (queue.length > 0) limited_BFS(queue, marked, obstacles_coord, score)
+  if (queue.length > 0) limited_BFS(queue, marked, obstacles_coord, food_spot, score)
 }
 
 function global_space_score(req, obstacles_coord, move) {
@@ -202,13 +205,19 @@ function global_space_score(req, obstacles_coord, move) {
   else if (move == "down") future_pos = [x_head, y_head + 1]
   else future_pos = [x_head + 1, y_head]
 
-  var depth = 5
+  var food_spot = {}
+  if (req.body.turn < 50) {
+    var foods = req.body.board.food
+    for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
+  }
+
+  var depth = Math.ceil(req.body.turn / 10)
   var queue = []
   queue.push([future_pos, depth])
   var marked = {}
   marked[stringify(future_pos)] = 0
   var score = { "s": 0 }
-  limited_BFS(queue, marked, obstacles_coord, score)
+  limited_BFS(queue, marked, obstacles_coord, food_spot, score)
   return score.s
 }
 
