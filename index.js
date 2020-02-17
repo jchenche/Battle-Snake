@@ -73,8 +73,8 @@ function shuffle_array(arr) {
   return arr
 }
 
-function stringify(x, y) {
-  return x.toString() + "," + y.toString()
+function stringify(coord) {
+  return coord[0].toString() + "," + coord[1].toString()
 }
 
 function get_obstacles_coord(req) {
@@ -84,19 +84,20 @@ function get_obstacles_coord(req) {
   for (let snake of snakes) {
     var snake_body = snake.body
     for (var i = 0; i < snake_body.length - 1; i++) { // Tail will be gone unless the snake ate and grew
-      coord[stringify(snake_body[i].x, snake_body[i].y)] = stringify(snake_body[i+1].x, snake_body[i+1].y)
+      // If a snake ate, its body size in the next turn will be incremented by one (that's why it is handled)
+      coord[stringify([snake_body[i].x, snake_body[i].y])] = stringify([snake_body[i+1].x, snake_body[i+1].y])
     }
   }
 
   var x_max = req.body.board.width
   var y_max = req.body.board.height
   for (var i = 0; i < x_max; i++) {
-    coord[stringify(i, -1)] = "wall" // Top wall
-    coord[stringify(i, y_max)] = "wall" // Bottom wall
+    coord[stringify([i, -1])] = "wall" // Top wall
+    coord[stringify([i, y_max])] = "wall" // Bottom wall
   }
   for (var i = 0; i < y_max; i++) {
-    coord[stringify(-1, i)] = "wall" // Left wall
-    coord[stringify(x_max, i)] = "wall" // Right wall
+    coord[stringify([-1, i])] = "wall" // Left wall
+    coord[stringify([x_max, i])] = "wall" // Right wall
   }
 
   return coord
@@ -113,7 +114,7 @@ function is_legal_move(req, obstacles_coord, move) {
   else if (move == "down") future_pos = [x_head, y_head + 1]
   else future_pos = [x_head + 1, y_head]
 
-  return !(stringify(future_pos[0], future_pos[1]) in obstacles_coord)
+  return !(stringify(future_pos) in obstacles_coord)
 }
 
 function local_space_score(req, obstacles_coord, move) {
@@ -133,10 +134,10 @@ function local_space_score(req, obstacles_coord, move) {
   var south_of_future = [future_pos[0], future_pos[1] + 1]
   var east_of_future =[future_pos[0] + 1, future_pos[1]]
 
-  if (stringify(north_of_future[0], north_of_future[1]) in obstacles_coord) score -= 1
-  if (stringify(west_of_future[0], west_of_future[1]) in obstacles_coord) score -= 1
-  if (stringify(south_of_future[0], south_of_future[1]) in obstacles_coord) score -= 1
-  if (stringify(east_of_future[0], east_of_future[1]) in obstacles_coord) score -= 1
+  if (stringify(north_of_future) in obstacles_coord) score -= 1
+  if (stringify(west_of_future) in obstacles_coord) score -= 1
+  if (stringify(south_of_future) in obstacles_coord) score -= 1
+  if (stringify(east_of_future) in obstacles_coord) score -= 1
 
   return score
 }
