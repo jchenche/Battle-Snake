@@ -59,11 +59,12 @@ function get_obstacles_coord(req) {
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
+    // Use a number to encode the snake's length and indicate that it's a snake head (by being a type number)
     coord[stringify([snake_body[0].x, snake_body[0].y])] = snake_body.length
     for (var i = 1; i < snake_body.length - 2; i++) {
       coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
     }
-    // If a snake ate, its body size in the next turn will be incremented by one (that's why it is handled)
+    // If a snake ate, its body size in the next turn will be incremented by 1 (that's why that case is handled)
     coord[stringify([snake_body[snake_body.length - 2].x, snake_body[snake_body.length - 2].y])] = "tail"
   }
 
@@ -100,7 +101,7 @@ function is_legal_move(req, obstacles_coord, move) {
 }
 
 function transform_score(enemy_length, my_length, score) {
-  if (typeof enemy_length == "number") { // It's a snake head
+  if (typeof enemy_length == "number") { // type number means it's a snake head
     if (enemy_length >= my_length) score -= 5
     else if (enemy_length < my_length) score += 3
 
@@ -167,6 +168,50 @@ function local_space_score(req, obstacles_coord, move) {
   return score
 }
 
+function limited_BFS(queue, marked, obstacles_coord, score) {
+  score.s += 1
+  var curr = queue.shift()
+  var curr_coord = curr[0]
+  var curr_depth = curr[1]
+  if (curr_depth <= 0) return
+
+  var north_of_curr = [curr_coord[0], curr_coord[1] - 1]
+  var west_of_curr = [curr_coord[0] - 1, curr_coord[1]]
+  var south_of_curr = [curr_coord[0], curr_coord[1] + 1]
+  var east_of_curr =[curr_coord[0] + 1, curr_coord[1]]
+  var futures = [north_of_curr, west_of_curr, south_of_curr, east_of_curr]
+
+  for (let future of futures) {
+    var stringed_future = stringify(future)
+    if (!(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
+      marked[stringed_future] = 0
+      queue.push([future, curr_depth - 1])
+    }
+  }
+
+  if (queue.length > 0) limited_BFS(queue, marked, obstacles_coord, score)
+}
+
+function global_space_score(req, obstacles_coord, move) {
+  var x_head = req.body.you.body[0].x
+  var y_head = req.body.you.body[0].y
+
+  var future_pos
+  if (move == "up") future_pos = [x_head, y_head - 1]
+  else if (move == "left") future_pos = [x_head - 1, y_head]
+  else if (move == "down") future_pos = [x_head, y_head + 1]
+  else future_pos = [x_head + 1, y_head]
+
+  var depth = 5
+  var queue = []
+  queue.push([future_pos, depth])
+  var marked = {}
+  marked[stringify(future_pos)] = 0
+  var score = { "s": 0 }
+  limited_BFS(queue, marked, obstacles_coord, score)
+  return score.s
+}
+
 function wider_space_score(req, obstacles_coord, move) {
   // Assign score to moves based on the # of available spots within a rectangular area
   var x_head = req.body.you.body[0].x
@@ -223,7 +268,7 @@ function get_best_move(req, obstacles_coord) {
   
   move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
   
-  move_rankings = move_rankings.map(move => [move[0], move[1] + wider_space_score(req, obstacles_coord, move[0])])
+  move_rankings = move_rankings.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, move[0])])
 
   move_rankings.sort((a, b) => b[1] - a[1])
   console.log("Turn: " + req.body.turn + ". Move rankings ======> " + move_rankings)
