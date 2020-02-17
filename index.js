@@ -85,10 +85,12 @@ function get_obstacles_coord(req) {
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
-    for (var i = 0; i < snake_body.length - 1; i++) { // Tail will be gone unless the snake ate and grew
-      // If a snake ate, its body size in the next turn will be incremented by one (that's why it is handled)
-      coord[stringify([snake_body[i].x, snake_body[i].y])] = stringify([snake_body[i+1].x, snake_body[i+1].y])
+    coord[stringify([snake_body[0].x, snake_body[0].y])] = snake_body.length
+    for (var i = 1; i < snake_body.length - 2; i++) {
+      coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
     }
+    // If a snake ate, its body size in the next turn will be incremented by one (that's why it is handled)
+    coord[stringify([snake_body[snake_body.length - 2].x, snake_body[snake_body.length - 2].y])] = "tail"
   }
 
   var x_max = req.body.board.width
@@ -140,6 +142,29 @@ function local_space_score(req, obstacles_coord, move) {
   var south_of_future = [future_pos[0], future_pos[1] + 1]
   var east_of_future =[future_pos[0] + 1, future_pos[1]]
 
+  var my_length = req.body.you.body.length
+  var enemy_length
+  if (stringify(north_of_future) in obstacles_coord) {
+    enemy_length = obstacles_coord[stringify(north_of_future)]
+    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
+    else score -= 1
+  }
+  if (stringify(west_of_future) in obstacles_coord) {
+    enemy_length = obstacles_coord[stringify(west_of_future)]
+    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
+    else score -= 1
+  }
+  if (stringify(south_of_future) in obstacles_coord) {
+    enemy_length = obstacles_coord[stringify(south_of_future)]
+    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
+    else score -= 1
+  }
+  if (stringify(east_of_future) in obstacles_coord) {
+    enemy_length = obstacles_coord[stringify(east_of_future)]
+    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
+    else score -= 1
+  }
+
   var food_spot = {}
   var health = req.body.you.health
   if (health > HEALTH_THRESHOLD) {
@@ -148,10 +173,10 @@ function local_space_score(req, obstacles_coord, move) {
   }
 
   // food_spot is mutually exclusive with obstacles_coord
-  if (stringify(north_of_future) in obstacles_coord || stringify(north_of_future) in food_spot) score -= 1
-  if (stringify(west_of_future) in obstacles_coord || stringify(west_of_future) in food_spot) score -= 1
-  if (stringify(south_of_future) in obstacles_coord || stringify(south_of_future) in food_spot) score -= 1
-  if (stringify(east_of_future) in obstacles_coord || stringify(east_of_future) in food_spot) score -= 1
+  if (stringify(north_of_future) in food_spot) score -= 1
+  if (stringify(west_of_future) in food_spot) score -= 1
+  if (stringify(south_of_future) in food_spot) score -= 1
+  if (stringify(east_of_future) in food_spot) score -= 1
 
   return score
 }
@@ -209,8 +234,6 @@ function get_best_move(req, obstacles_coord) {
     console.log("====== No legal moves available ======")
     return "up"
   }
-
-  // TODO: Penalize moves that will potentially collide with enemies head unless I am strictly bigger
   
   move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
   
