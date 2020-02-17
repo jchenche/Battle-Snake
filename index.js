@@ -35,7 +35,6 @@ app.post('/start', (request, response) => {
   return response.json(data)
 })
 
-const WIDER_SEARCH_LIMIT = 2
 const HEALTH_THRESHOLD = 25
 
 function shuffle_array(arr) {
@@ -72,15 +71,11 @@ function get_obstacles_coord(req) {
   var y_max = req.body.board.height
   for (var i = 0; i < x_max; i++) {
     coord[stringify([i, -1])] = "wall" // Top wall
-    coord[stringify([i, -2])] = "wall" // Top wall layer 2
     coord[stringify([i, y_max])] = "wall" // Bottom wall
-    coord[stringify([i, y_max + 1])] = "wall" // Bottom wall layer 2
   }
   for (var i = 0; i < y_max; i++) {
     coord[stringify([-1, i])] = "wall" // Left wall
-    coord[stringify([-2, i])] = "wall" // Left wall layer 2
     coord[stringify([x_max, i])] = "wall" // Right wall
-    coord[stringify([x_max + 1, i])] = "wall" // Right wall layer 2
   }
 
   return coord
@@ -100,25 +95,27 @@ function is_legal_move(req, obstacles_coord, move) {
   return !(stringify(future_pos) in obstacles_coord)
 }
 
-function transform_score(enemy_length, my_length, score) {
+function transform_battle_score(enemy_length, my_length, score) {
   if (typeof enemy_length == "number") { // type number means it's a snake head
-    if (enemy_length >= my_length) score -= 6
-    else if (enemy_length < my_length) score += 2
-
-  } else {
-    score -= 3
+    if (enemy_length >= my_length) score -= 5
+    else if (enemy_length < my_length) score += 1
   }
   return score
 }
 
 function transform_food_score(health, score) {
   if (health > HEALTH_THRESHOLD) score -= 1
-  else score += 1
+  else score += 5
   return score
 }
 
+const get_north = (coord) => { return [coord[0], coord[1] - 1] }
+const get_west = (coord) => { return [coord[0] - 1, coord[1]] }
+const get_south = (coord) => { return [coord[0], coord[1] + 1] }
+const get_east = (coord) => { return [coord[0] + 1, coord[1]] }
+
 function local_space_score(req, obstacles_coord, move) {
-  var score = 16
+  var score = 5
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
 
@@ -128,31 +125,17 @@ function local_space_score(req, obstacles_coord, move) {
   else if (move == "down") future_pos = [x_head, y_head + 1]
   else future_pos = [x_head + 1, y_head]
 
-  var north_of_future = [future_pos[0], future_pos[1] - 1]
-  var west_of_future = [future_pos[0] - 1, future_pos[1]]
-  var south_of_future = [future_pos[0], future_pos[1] + 1]
-  var east_of_future =[future_pos[0] + 1, future_pos[1]]
-
+  var futures = [get_north(future_pos), get_west(future_pos), get_south(future_pos), get_east(future_pos)]
 
   var my_length = req.body.you.body.length
   var enemy_length
-  if (stringify(north_of_future) in obstacles_coord) {
-    enemy_length = obstacles_coord[stringify(north_of_future)]
-    score = transform_score(enemy_length, my_length, score)
+  for (let future of futures) {
+    if (stringify(future) in obstacles_coord) {
+      enemy_length = obstacles_coord[stringify(future)]
+      score = transform_battle_score(enemy_length, my_length, score)
+      score -= 1
+    }
   }
-  if (stringify(west_of_future) in obstacles_coord) {
-    enemy_length = obstacles_coord[stringify(west_of_future)]
-    score = transform_score(enemy_length, my_length, score)
-  }
-  if (stringify(south_of_future) in obstacles_coord) {
-    enemy_length = obstacles_coord[stringify(south_of_future)]
-    score = transform_score(enemy_length, my_length, score)
-  }
-  if (stringify(east_of_future) in obstacles_coord) {
-    enemy_length = obstacles_coord[stringify(east_of_future)]
-    score = transform_score(enemy_length, my_length, score)
-  }
-
 
   var food_spot = {}
   var health = req.body.you.health
@@ -160,29 +143,27 @@ function local_space_score(req, obstacles_coord, move) {
   for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
 
   // food_spot is mutually exclusive with obstacles_coord
-  if (stringify(north_of_future) in food_spot) score = transform_food_score(health, score)
-  if (stringify(west_of_future) in food_spot) score = transform_food_score(health, score)
-  if (stringify(south_of_future) in food_spot) score = transform_food_score(health, score)
-  if (stringify(east_of_future) in food_spot) score = transform_food_score(health, score)
+  for (let future of futures) {
+    if (stringify(future) in food_spot) score = transform_food_score(health, score)
+  }
 
   return score
 }
 
-function limited_BFS(queue, marked, obstacles_coord, food_spot, score) {
+function limited_BFS(req, queue, marked, obstacles_coord, food_spot, score) {
   var curr = queue.shift()
   var curr_coord = curr[0]
   var curr_depth = curr[1]
 
   score.s += 1
-  if (stringify(curr_coord) in food_spot) score.s += 1
+  if (stringify(curr_coord) in food_spot) {
+    if (req.body.turn < 50 || req.body.you.health < HEALTH_THRESHOLD) score.s += 5
+    else score.s += 1
+  }
 
   if (curr_depth <= 0) return
 
-  var north_of_curr = [curr_coord[0], curr_coord[1] - 1]
-  var west_of_curr = [curr_coord[0] - 1, curr_coord[1]]
-  var south_of_curr = [curr_coord[0], curr_coord[1] + 1]
-  var east_of_curr =[curr_coord[0] + 1, curr_coord[1]]
-  var futures = [north_of_curr, west_of_curr, south_of_curr, east_of_curr]
+  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
   for (let future of futures) {
     var stringed_future = stringify(future)
@@ -192,7 +173,7 @@ function limited_BFS(queue, marked, obstacles_coord, food_spot, score) {
     }
   }
 
-  if (queue.length > 0) limited_BFS(queue, marked, obstacles_coord, food_spot, score)
+  if (queue.length > 0) limited_BFS(req, queue, marked, obstacles_coord, food_spot, score)
 }
 
 function global_space_score(req, obstacles_coord, move) {
@@ -206,10 +187,8 @@ function global_space_score(req, obstacles_coord, move) {
   else future_pos = [x_head + 1, y_head]
 
   var food_spot = {}
-  if (req.body.turn < 50) {
-    var foods = req.body.board.food
-    for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
-  }
+  var foods = req.body.board.food
+  for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
 
   var depth = Math.ceil(req.body.turn / 10)
   var queue = []
@@ -217,53 +196,8 @@ function global_space_score(req, obstacles_coord, move) {
   var marked = {}
   marked[stringify(future_pos)] = 0
   var score = { "s": 0 }
-  limited_BFS(queue, marked, obstacles_coord, food_spot, score)
+  limited_BFS(req, queue, marked, obstacles_coord, food_spot, score)
   return score.s
-}
-
-function wider_space_score(req, obstacles_coord, move) {
-  // Assign score to moves based on the # of available spots within a rectangular area
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-
-  // Find the rectangular area ahead of the snake's orientation
-  var future_pos, x_lower_range, x_upper_range, y_lower_range, y_upper_range
-  if (move == "up") {
-    future_pos = [x_head, y_head - 1]
-    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
-    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
-    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
-    y_upper_range = future_pos[1]
-  }
-  else if (move == "left") {
-    future_pos = [x_head - 1, y_head]
-    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
-    x_upper_range = future_pos[0]
-    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
-    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
-  }
-  else if (move == "down") {
-    future_pos = [x_head, y_head + 1]
-    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
-    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
-    y_lower_range = future_pos[1]
-    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
-  }
-  else {
-    future_pos = [x_head + 1, y_head]
-    x_lower_range = future_pos[0]
-    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
-    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
-    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
-  }
-
-  var score = (x_upper_range - x_lower_range + 1) * (y_upper_range - y_lower_range + 1)
-  for (var i = x_lower_range; i <= x_upper_range; i++)
-    for (var j = y_lower_range; j <= y_upper_range; j++)
-      if (stringify([i, j]) in obstacles_coord)
-        score -= 1
-
-  return score
 }
 
 function get_best_move(req, obstacles_coord) {
