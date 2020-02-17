@@ -35,7 +35,8 @@ app.post('/start', (request, response) => {
   return response.json(data)
 })
 
-var moves = ["up", "left", "down", "right"] // Code depends on the order of array
+const moves = ["up", "left", "down", "right"] // Code depends on the order of array
+const WIDER_SEARCH_LIMIT = 2
 
 function get_random_new_move(old_move) {
   var new_move = ""
@@ -93,11 +94,15 @@ function get_obstacles_coord(req) {
   var y_max = req.body.board.height
   for (var i = 0; i < x_max; i++) {
     coord[stringify([i, -1])] = "wall" // Top wall
+    coord[stringify([i, -2])] = "wall" // Top wall layer 2
     coord[stringify([i, y_max])] = "wall" // Bottom wall
+    coord[stringify([i, y_max + 1])] = "wall" // Bottom wall layer 2
   }
   for (var i = 0; i < y_max; i++) {
     coord[stringify([-1, i])] = "wall" // Left wall
+    coord[stringify([-2, i])] = "wall" // Left wall layer 2
     coord[stringify([x_max, i])] = "wall" // Right wall
+    coord[stringify([x_max + 1, i])] = "wall" // Right wall layer 2
   }
 
   return coord
@@ -142,10 +147,47 @@ function local_space_score(req, obstacles_coord, move) {
   return score
 }
 
-function global_space_score(req, obstacles_coord, move) {
-  var score = 0
+function wider_space_score(req, obstacles_coord, move) {
+  // Assign score to moves based on the # of available spots within a rectangular area
+  var x_head = req.body.you.body[0].x
+  var y_head = req.body.you.body[0].y
 
+  // Find the rectangular area ahead of the snake's orientation
+  var future_pos, x_lower_range, x_upper_range, y_lower_range, y_upper_range
+  if (move == "up") {
+    future_pos = [x_head, y_head - 1]
+    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
+    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
+    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
+    y_upper_range = future_pos[1]
+  }
+  else if (move == "left") {
+    future_pos = [x_head - 1, y_head]
+    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
+    x_upper_range = future_pos[0]
+    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
+    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
+  }
+  else if (move == "down") {
+    future_pos = [x_head, y_head + 1]
+    x_lower_range = future_pos[0] - WIDER_SEARCH_LIMIT
+    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
+    y_lower_range = future_pos[1]
+    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
+  }
+  else {
+    future_pos = [x_head + 1, y_head]
+    x_lower_range = future_pos[0]
+    x_upper_range = future_pos[0] + WIDER_SEARCH_LIMIT
+    y_lower_range = future_pos[1] - WIDER_SEARCH_LIMIT
+    y_upper_range = future_pos[1] + WIDER_SEARCH_LIMIT
+  }
 
+  var score = (x_upper_range - x_lower_range + 1) * (y_upper_range - y_lower_range + 1)
+  for(var i = x_lower_range; i <= x_upper_range; i++)
+    for(var j = y_lower_range; j <= y_upper_range; j++)
+      if (stringify([i, j]) in obstacles_coord)
+        score -= 1
 
   return score
 }
@@ -158,10 +200,12 @@ function get_best_move(req, obstacles_coord) {
     console.log("====== No legal moves available ======")
     return "up"
   }
+
+  // TODO: Penalize moves that will potentially collide with enemies head unless I am strictly bigger
   
   move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
   
-  move_rankings = move_rankings.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, move[0])])
+  move_rankings = move_rankings.map(move => [move[0], move[1] + wider_space_score(req, obstacles_coord, move[0])])
 
   move_rankings.sort((a, b) => b[1] - a[1])
   console.log("Turn: " + req.body.turn + ". Move rankings ======> " + move_rankings)
