@@ -101,19 +101,18 @@ function is_legal_move(req, obstacles_coord, move) {
 
 function transform_score(enemy_length, my_length, score) {
   if (typeof enemy_length == "number") { // It's a snake head
-    if (enemy_length > my_length) score -= 3
+    if (enemy_length >= my_length) score -= 4
     else if (enemy_length < my_length) score += 1
-    else score -= 1
 
   } else {
-    score -= 1
+    score -= 3
   }
   return score
 }
 
 function local_space_score(req, obstacles_coord, move) {
   // Assign score to moves based on the # of available spots locally
-  var score = 4
+  var score = 12
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
 
