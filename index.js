@@ -37,6 +37,7 @@ app.post('/start', (request, response) => {
 
 const moves = ["up", "left", "down", "right"] // Code depends on the order of array
 const WIDER_SEARCH_LIMIT = 2
+const HEALTH_THRESHOLD = 15
 
 function get_random_new_move(old_move) {
   var new_move = ""
@@ -139,10 +140,18 @@ function local_space_score(req, obstacles_coord, move) {
   var south_of_future = [future_pos[0], future_pos[1] + 1]
   var east_of_future =[future_pos[0] + 1, future_pos[1]]
 
-  if (stringify(north_of_future) in obstacles_coord) score -= 1
-  if (stringify(west_of_future) in obstacles_coord) score -= 1
-  if (stringify(south_of_future) in obstacles_coord) score -= 1
-  if (stringify(east_of_future) in obstacles_coord) score -= 1
+  var food_spot = {}
+  var health = req.body.you.health
+  if (health > HEALTH_THRESHOLD) {
+    var foods = req.body.board.food
+    for (let food of foods) food_spot[stringify([food.x, food.y])] = "food"
+  }
+
+  // food_spot is mutually exclusive with obstacles_coord
+  if (stringify(north_of_future) in obstacles_coord || stringify(north_of_future) in food_spot) score -= 1
+  if (stringify(west_of_future) in obstacles_coord || stringify(west_of_future) in food_spot) score -= 1
+  if (stringify(south_of_future) in obstacles_coord || stringify(south_of_future) in food_spot) score -= 1
+  if (stringify(east_of_future) in obstacles_coord || stringify(east_of_future) in food_spot) score -= 1
 
   return score
 }
@@ -184,8 +193,8 @@ function wider_space_score(req, obstacles_coord, move) {
   }
 
   var score = (x_upper_range - x_lower_range + 1) * (y_upper_range - y_lower_range + 1)
-  for(var i = x_lower_range; i <= x_upper_range; i++)
-    for(var j = y_lower_range; j <= y_upper_range; j++)
+  for (var i = x_lower_range; i <= x_upper_range; i++)
+    for (var j = y_lower_range; j <= y_upper_range; j++)
       if (stringify([i, j]) in obstacles_coord)
         score -= 1
 
