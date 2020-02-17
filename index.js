@@ -35,34 +35,8 @@ app.post('/start', (request, response) => {
   return response.json(data)
 })
 
-const moves = ["up", "left", "down", "right"] // Code depends on the order of array
 const WIDER_SEARCH_LIMIT = 2
 const HEALTH_THRESHOLD = 15
-
-function get_random_new_move(old_move) {
-  var new_move = ""
-  do {
-    new_move = moves[Math.floor(Math.random() * 4)]
-  } while (new_move == old_move)
-  return new_move
-}
-
-function get_snake_orientation(req) {  
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-  var x_neck = req.body.you.body[1].x
-  var y_neck = req.body.you.body[1].y
-
-  if (x_head - x_neck > 0) {
-    return "right"
-  } else if (x_head - x_neck < 0) {
-    return "left"
-  } else if (y_head - y_neck > 0) {
-    return "down"
-  } else {
-    return "up"
-  }
-}
 
 function shuffle_array(arr) {
   var i, j, temp
@@ -126,9 +100,11 @@ function is_legal_move(req, obstacles_coord, move) {
 }
 
 function transform_score(enemy_length, my_length, score) {
-  if (typeof enemy_length == "number") {
+  if (typeof enemy_length == "number") { // It's a snake head
     if (enemy_length > my_length) score -= 3
-    else score += 1
+    else if (enemy_length < my_length) score += 1
+    else score -= 1
+
   } else {
     score -= 1
   }
@@ -152,6 +128,7 @@ function local_space_score(req, obstacles_coord, move) {
   var south_of_future = [future_pos[0], future_pos[1] + 1]
   var east_of_future =[future_pos[0] + 1, future_pos[1]]
 
+
   var my_length = req.body.you.body.length
   var enemy_length
   if (stringify(north_of_future) in obstacles_coord) {
@@ -170,6 +147,7 @@ function local_space_score(req, obstacles_coord, move) {
     enemy_length = obstacles_coord[stringify(east_of_future)]
     score = transform_score(enemy_length, my_length, score)
   }
+
 
   var food_spot = {}
   var health = req.body.you.health
