@@ -125,6 +125,16 @@ function is_legal_move(req, obstacles_coord, move) {
   return !(stringify(future_pos) in obstacles_coord)
 }
 
+function transform_score(enemy_length, my_length, score) {
+  if (typeof enemy_length == "number") {
+    if (enemy_length > my_length) score -= 3
+    else score += 1
+  } else {
+    score -= 1
+  }
+  return score
+}
+
 function local_space_score(req, obstacles_coord, move) {
   // Assign score to moves based on the # of available spots locally
   var score = 4
@@ -146,23 +156,19 @@ function local_space_score(req, obstacles_coord, move) {
   var enemy_length
   if (stringify(north_of_future) in obstacles_coord) {
     enemy_length = obstacles_coord[stringify(north_of_future)]
-    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
-    else score -= 1
+    score = transform_score(enemy_length, my_length, score)
   }
   if (stringify(west_of_future) in obstacles_coord) {
     enemy_length = obstacles_coord[stringify(west_of_future)]
-    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
-    else score -= 1
+    score = transform_score(enemy_length, my_length, score)
   }
   if (stringify(south_of_future) in obstacles_coord) {
     enemy_length = obstacles_coord[stringify(south_of_future)]
-    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
-    else score -= 1
+    score = transform_score(enemy_length, my_length, score)
   }
   if (stringify(east_of_future) in obstacles_coord) {
     enemy_length = obstacles_coord[stringify(east_of_future)]
-    if (typeof enemy_length == "number" && enemy_length > my_length) score -= 3
-    else score -= 1
+    score = transform_score(enemy_length, my_length, score)
   }
 
   var food_spot = {}
