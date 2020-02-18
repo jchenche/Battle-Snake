@@ -111,7 +111,7 @@ function is_own_tail(req, stringed_coord) {
 }
 
 const HEALTH_THRESHOLD = 25
-const DEPTH_PARAMETER_DIVISOR = 10
+const DEPTH_PARAMETER_DIVISOR = 15
 const TIME_TO_DIET = 100
 const SIZE_TO_CHASE_ITSELF = 10
 
