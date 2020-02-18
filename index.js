@@ -109,7 +109,7 @@ function is_own_tail(req, stringed_coord) {
   return stringed_coord == stringify([my_tail.x, my_tail.y])
 }
 
-const HEALTH_THRESHOLD = 25
+const HEALTH_THRESHOLD = 20
 const DEPTH_PARAMETER_DIVISOR = 15
 const TIME_TO_DIET = 100
 const SIZE_TO_CHASE_ITSELF = 10
