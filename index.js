@@ -121,7 +121,7 @@ function transform_battle_score(enemy_length, my_length, score) {
 
 function transform_food_score(req, score, curr_depth = 0) {
   if (req.body.turn < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
-    return score + curr_depth
+    return score + 5 + curr_depth
   return score + 1
 }
 
