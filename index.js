@@ -104,10 +104,16 @@ function is_legal_move(req, obstacles_coord, move) {
   return !(stringify(future_pos) in obstacles_coord)
 }
 
-const HEALTH_THRESHOLD = 20
-const DEPTH_PARAMETER = 15
+function is_own_tail(req, stringed_coord) {
+  var my_length = req.body.you.body.length
+  var my_tail = req.body.you.body[my_length - 1]
+  return stringed_coord == stringify([my_tail.x, my_tail.y])
+}
+
+const HEALTH_THRESHOLD = 25
+const DEPTH_PARAMETER_DIVISOR = 15
 const TIME_TO_DIET = 100
-const SIZE_TO_CHASE_TAIL = 15
+const SIZE_TO_CHASE_ITSELF = 10
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length) return score - 5
@@ -156,11 +162,8 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   score.s += 1 // Increment score by 1 for every space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s)
-  if (stringify(curr_coord) in obstacles_coord &&
-      obstacles_coord[stringify(curr_coord)] == "tail" &&
-      req.body.you.body.length > SIZE_TO_CHASE_TAIL) {
-        score.s += curr_depth
-      }
+  if (is_own_tail(req , stringify(curr_coord)) && req.body.you.body.length > SIZE_TO_CHASE_ITSELF)
+    score.s += curr_depth
 
   if (curr_depth <= 0) return
 
@@ -184,7 +187,7 @@ function global_space_score(req, obstacles_coord, move) {
 
   var foods_coord = get_foods_coord(req)
 
-  var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER)
+  var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
   var queue = [[future_pos, depth]] // List of (coord, depth) pairs
 
   var marked = {}
