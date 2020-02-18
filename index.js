@@ -21,32 +21,27 @@ app.use(poweredByHandler)
 
 // --- SNAKE LOGIC GOES BELOW THIS LINE ---
 
-// Handle POST request to '/start'
 app.post('/start', (request, response) => {
-  // NOTE: Do something here to start the game
-
-  // Response data
   const data = {
     "color": '#0F52BA',
     "headType": "bwc-snowman",
     "tailType": "bwc-bonhomme"
   }
-
   return response.json(data)
 })
 
 function shuffle_array(arr) {
   var i, j, temp
   for (i = arr.length - 1; i > 0; i--) {
-      j = Math.floor(Math.random() * (i + 1))
-      temp = arr[i]
-      arr[i] = arr[j]
-      arr[j] = temp
+    j = Math.floor(Math.random() * (i + 1))
+    temp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = temp
   }
   return arr
 }
 
-function get_future_pos(x_head, y_head, move) {
+function get_move_pos(x_head, y_head, move) {
   if (move == "up") return [x_head, y_head - 1]
   else if (move == "left") return [x_head - 1, y_head]
   else if (move == "down") return [x_head, y_head + 1]
@@ -54,6 +49,7 @@ function get_future_pos(x_head, y_head, move) {
 }
 
 const stringify = (coord) => { return coord[0].toString() + "," + coord[1].toString() }
+
 const get_north = (coord) => { return [coord[0], coord[1] - 1] }
 const get_west = (coord) => { return [coord[0] - 1, coord[1]] }
 const get_south = (coord) => { return [coord[0], coord[1] + 1] }
@@ -99,18 +95,18 @@ function is_legal_move(req, obstacles_coord, move) {
   // Make sure it doesn't eat itself and collide with obstacles
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
-  future_pos = get_future_pos(x_head, y_head, move)
-  return !(stringify(future_pos) in obstacles_coord)
+  var move_pos = get_move_pos(x_head, y_head, move)
+  return !(stringify(move_pos) in obstacles_coord)
 }
 
-function is_own_tail(req, stringed_coord) {
+function is_own_tail(req, curr_coord) {
   var my_length = req.body.you.body.length
   var my_tail = req.body.you.body[my_length - 1]
-  return stringed_coord == stringify([my_tail.x, my_tail.y])
+  return stringify(curr_coord) == stringify([my_tail.x, my_tail.y])
 }
 
-const HEALTH_THRESHOLD = 20
 const DEPTH_PARAMETER_DIVISOR = 15
+const HEALTH_THRESHOLD = 20
 const TIME_TO_DIET = 100
 const SIZE_TO_CHASE_ITSELF = 10
 
@@ -125,17 +121,17 @@ function transform_food_score(req, score, curr_depth = 0) {
   return score + 1
 }
 
-function transform_chase_tail_score(score, curr_depth) {
+function transform_tail_chase_score(score, curr_depth) {
   return score + curr_depth
 }
 
-function local_space_score(req, obstacles_coord, move) {
+function local_space_score(req, obstacles_coord, foods_coord, move) {
   var score = 0
 
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
-  var future_pos = get_future_pos(x_head, y_head, move)
-  var futures = [get_north(future_pos), get_west(future_pos), get_south(future_pos), get_east(future_pos)]
+  var move_pos = get_move_pos(x_head, y_head, move)
+  var futures = [get_north(move_pos), get_west(move_pos), get_south(move_pos), get_east(move_pos)]
 
   var my_length = req.body.you.body.length
   var enemy_length
@@ -147,13 +143,9 @@ function local_space_score(req, obstacles_coord, move) {
       if (typeof enemy_length == "number") { // type number means it's a snake head
         score = transform_battle_score(enemy_length, my_length, score)
       }
+    } else if (stringify(future) in foods_coord) {
+      score = transform_food_score(req, score)
     }
-  }
-
-  // foods_coord is mutually exclusive with obstacles_coord
-  var foods_coord = get_foods_coord(req)
-  for (let future of futures) {
-    if (stringify(future) in foods_coord) score = transform_food_score(req, score)
   }
 
   return score
@@ -164,10 +156,10 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   var curr_coord = curr[0]
   var curr_depth = curr[1]
 
-  score.s += 1 // Increment score by 1 for every space explored
+  score.s += 1 // Increment score by 1 for every non-obstacle space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
-  if (is_own_tail(req , stringify(curr_coord)) && req.body.you.body.length > SIZE_TO_CHASE_ITSELF)
-    score.s = transform_chase_tail_score(score.s, curr_depth)
+  if (is_own_tail(req , curr_coord) && req.body.you.body.length > SIZE_TO_CHASE_ITSELF)
+    score.s = transform_tail_chase_score(score.s, curr_depth)
 
   if (curr_depth <= 0) return
 
@@ -184,64 +176,56 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   if (queue.length > 0) limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score)
 }
 
-function global_space_score(req, obstacles_coord, move) {
+function global_space_score(req, obstacles_coord, foods_coord, move) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
-  var future_pos = get_future_pos(x_head, y_head, move)
-
-  var foods_coord = get_foods_coord(req)
+  var move_pos = get_move_pos(x_head, y_head, move)
 
   var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
-  var queue = [[future_pos, depth]] // List of (coord, depth) pairs
+  var queue = [[move_pos, depth]] // List of (coord, depth) pairs
 
   var marked = {}
-  marked[stringify(future_pos)] = "marked"
+  marked[stringify(move_pos)] = "marked"
 
   var score = { "s": 0 }
   limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score)
   return score.s
 }
 
-function get_best_move(req, obstacles_coord) {
-  var move_rankings = shuffle_array(["up", "left", "down", "right"])
-  move_rankings = move_rankings.map(move => [move, 0])
-  move_rankings = move_rankings.filter(move => is_legal_move(req, obstacles_coord, move[0]))
-  if (move_rankings.length == 0) {
+function get_best_move(req, obstacles_coord, foods_coord) {
+  var moves = shuffle_array(["up", "left", "down", "right"])
+  moves = moves.map(move => [move, 0])
+  moves = moves.filter(move => is_legal_move(req, obstacles_coord, move[0]))
+  if (moves.length == 0) {
     console.log("====== No legal moves available ======")
     return "up"
   }
   
-  move_rankings = move_rankings.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, move[0])])
-  move_rankings = move_rankings.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, move[0])])
+  moves = moves.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, foods_coord, move[0])])
+  moves = moves.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, foods_coord, move[0])])
 
-  move_rankings.sort((a, b) => b[1] - a[1])
-  console.log("Turn: " + req.body.turn + ". Move rankings ======> " + move_rankings)
-  return move_rankings[0][0] // Move with the highest score
+  moves.sort((a, b) => b[1] - a[1])
+  console.log("Turn: " + req.body.turn + ". Move rankings ======> " + moves)
+  return moves[0][0] // Move with the highest score
 }
 
-// Handle POST request to '/move'
 app.post('/move', (req, res) => {
-  // NOTE: Do something here to generate your move
-
-  // Response data
   const data = {
     move: "up", // coordinate (0,0) is at the upper left corner
   }
 
   var obstacles_coord = get_obstacles_coord(req)
-
-  data.move = get_best_move(req, obstacles_coord)
+  var foods_coord = get_foods_coord(req)
+  data.move = get_best_move(req, obstacles_coord, foods_coord)
 
   return res.json(data)
 })
 
 app.post('/end', (request, response) => {
-  // NOTE: Any cleanup when a game is complete.
   return response.json({})
 })
 
 app.post('/ping', (request, response) => {
-  // Used for checking if this snake is still alive.
   return response.json({});
 })
 
