@@ -115,7 +115,7 @@ const TIME_TO_DIET = 100
 const SIZE_TO_CHASE_ITSELF = 10
 
 function transform_battle_score(enemy_length, my_length, score) {
-  if (enemy_length >= my_length) return score - 5
+  if (enemy_length >= my_length) return score - 10
   return score + 1
 }
 
