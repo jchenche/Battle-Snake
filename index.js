@@ -120,9 +120,14 @@ function transform_battle_score(enemy_length, my_length, score) {
   return score + 1
 }
 
-function transform_food_score(req, score) {
-  if (req.body.turn < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD) return score + 5
+function transform_food_score(req, score, curr_depth = 0) {
+  if (req.body.turn < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
+    return score + curr_depth
   return score + 1
+}
+
+function transform_chase_tail_score(score, curr_depth) {
+  return score + curr_depth
 }
 
 function local_space_score(req, obstacles_coord, move) {
@@ -161,9 +166,9 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   var curr_depth = curr[1]
 
   score.s += 1 // Increment score by 1 for every space explored
-  if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s)
+  if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
   if (is_own_tail(req , stringify(curr_coord)) && req.body.you.body.length > SIZE_TO_CHASE_ITSELF)
-    score.s += curr_depth
+    score.s = transform_chase_tail_score(score.s, curr_depth)
 
   if (curr_depth <= 0) return
 
