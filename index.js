@@ -106,20 +106,21 @@ function is_legal_move(req, obstacles_coord, move) {
 
 const HEALTH_THRESHOLD = 20
 const DEPTH_PARAMETER = 15
-const TURN_TO_DIET = 50
+const TIME_TO_DIET = 100
+const SIZE_TO_CHASE_TAIL = 15
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length) return score - 5
-  else return score + 1
+  return score + 1
 }
 
 function transform_food_score(req, score) {
-  if (req.body.turn < TURN_TO_DIET || req.body.you.health < HEALTH_THRESHOLD) return score + 5
+  if (req.body.turn < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD) return score + 5
   return score + 1
 }
 
 function local_space_score(req, obstacles_coord, move) {
-  var score = 8
+  var score = 0
 
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
@@ -155,6 +156,11 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   score.s += 1 // Increment score by 1 for every space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s)
+  if (stringify(curr_coord) in obstacles_coord &&
+      obstacles_coord[stringify(curr_coord)] == "tail" &&
+      req.body.you.body.length > SIZE_TO_CHASE_TAIL) {
+        score.s += curr_depth
+      }
 
   if (curr_depth <= 0) return
 
