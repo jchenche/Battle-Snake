@@ -54,7 +54,6 @@ function get_future_pos(x_head, y_head, move) {
 }
 
 const stringify = (coord) => { return coord[0].toString() + "," + coord[1].toString() }
-
 const get_north = (coord) => { return [coord[0], coord[1] - 1] }
 const get_west = (coord) => { return [coord[0] - 1, coord[1]] }
 const get_south = (coord) => { return [coord[0], coord[1] + 1] }
