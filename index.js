@@ -66,7 +66,10 @@ function get_obstacles_coord(req) {
     for (var i = 1; i < snake_body.length - 2; i++) {
       coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
     }
-    // If a snake ate, its body size in the next turn will be incremented by 1 (that's why this case is handled)
+    // If a snake ate, its body size in the next turn will be incremented by 1 and
+    // the second last position will be on top of the last (grown) position
+    // so that space will be successfully registered as an obstacle in this case.
+    // Note that the tail below is a tail of the next turn and not the current turn.
     coord[stringify([snake_body[snake_body.length - 2].x, snake_body[snake_body.length - 2].y])] = "tail"
   }
 
@@ -99,16 +102,21 @@ function is_legal_move(req, obstacles_coord, move) {
   return !(stringify(move_pos) in obstacles_coord)
 }
 
-function is_own_tail(req, curr_coord) {
-  var my_length = req.body.you.body.length
-  var my_tail = req.body.you.body[my_length - 1]
-  return stringify(curr_coord) == stringify([my_tail.x, my_tail.y])
+function is_current_tail(req, curr_coord) {
+  var stringed_curr = stringify(curr_coord)
+  var snakes = req.body.board.snakes
+  for (let snake of snakes) {
+    var snake_body = snake.body
+    var snake_length = snake_body.length
+    if (stringed_curr == stringify([snake_body[snake_length - 1].x, snake_body[snake_length - 1].y]))
+      return true
+  }
+  return false
 }
 
 const DEPTH_PARAMETER_DIVISOR = 15
 const HEALTH_THRESHOLD = 20
 const TIME_TO_DIET = 100
-const SIZE_TO_CHASE_ITSELF = 10
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length) return score - 10
@@ -158,8 +166,7 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
-  if (is_own_tail(req , curr_coord) && req.body.you.body.length > SIZE_TO_CHASE_ITSELF)
-    score.s = transform_tail_chase_score(score.s, curr_depth)
+  if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(score.s, curr_depth)
 
   if (curr_depth <= 0) return
 
