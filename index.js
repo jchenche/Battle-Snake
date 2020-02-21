@@ -132,15 +132,15 @@ const SIZE_TO_DIET = 15
 const TIME_TO_AVOID_HEADS = 50
 const TIME_TO_CHASE_TAILS = 100
 
-function transform_food_score(req, score, curr_depth = 0) {
-  if (req.body.you.body.length < SIZE_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
-    return score + curr_depth + 5
-  return score + 1
-}
-
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
     return score - 15
+  return score + 1
+}
+
+function transform_food_score(req, score, curr_depth = 0) {
+  if (req.body.you.body.length < SIZE_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
+    return score + curr_depth + 5
   return score + 1
 }
 
@@ -153,7 +153,7 @@ function transform_head_avoid_score(req, score, curr_depth) {
 function transform_tail_chase_score(req, score, curr_depth) {
   if (req.body.turn > TIME_TO_CHASE_TAILS)
     return score + curr_depth
-  return score + 1
+  return score
 }
 
 function local_space_score(req, obstacles_coord, foods_coord, move) {
