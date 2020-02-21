@@ -116,24 +116,24 @@ function is_current_tail(req, curr_coord) {
 
 const DEPTH_PARAMETER_DIVISOR = 10
 const HEALTH_THRESHOLD = 25
-const TIME_TO_DIET = 100
-const TIME_TO_LOVE_TAILS = 150
+const TIME_TO_DIET = 20
+const TIME_TO_LOVE_TAILS = 100
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
     return score - 15
-  return score + 15
+  return score + 5
 }
 
 function transform_food_score(req, score, curr_depth = 0) {
-  if (req.body.turn < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
+  if (req.body.you.body.length < TIME_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
     return score + curr_depth + 5
   return score + 1
 }
 
 function transform_tail_chase_score(req, score, curr_depth) {
   if (req.body.turn > TIME_TO_LOVE_TAILS)
-    return score + curr_depth
+    return score + curr_depth + 5
   return score + 1
 }
 
