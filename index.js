@@ -103,13 +103,25 @@ function is_legal_move(req, obstacles_coord, move) {
 }
 
 function is_current_tail(req, curr_coord) {
-  var stringed_curr = stringify(curr_coord)
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
     var snake_length = snake_body.length
-    if (stringed_curr == stringify([snake_body[snake_length - 1].x, snake_body[snake_length - 1].y]))
+    if (stringify(curr_coord) == stringify([snake_body[snake_length - 1].x, snake_body[snake_length - 1].y]))
       return true
+  }
+  return false
+}
+
+function is_enemy_potential_move(req, curr_coord) {
+  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
+  var snakes = req.body.board.snakes
+  for (let future of futures) {
+    for (let snake of snakes) {
+      var snake_body = snake.body
+      if (stringify(future) == stringify([snake_body[0].x, snake_body[0].y]))
+        return true
+    }
   }
   return false
 }
@@ -117,13 +129,8 @@ function is_current_tail(req, curr_coord) {
 const DEPTH_PARAMETER_DIVISOR = 15
 const HEALTH_THRESHOLD = 25
 const SIZE_TO_DIET = 15
-const TIME_TO_LOVE_TAILS = 100
-
-function transform_battle_score(enemy_length, my_length, score) {
-  if (enemy_length >= my_length)
-    return score - 15
-  return score + 1
-}
+const TIME_TO_AVOID_HEADS = 50
+const TIME_TO_CHASE_TAILS = 100
 
 function transform_food_score(req, score, curr_depth = 0) {
   if (req.body.you.body.length < SIZE_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
@@ -131,8 +138,20 @@ function transform_food_score(req, score, curr_depth = 0) {
   return score + 1
 }
 
+function transform_battle_score(enemy_length, my_length, score) {
+  if (enemy_length >= my_length)
+    return score - 15
+  return score + 1
+}
+
+function transform_head_avoid_score(req, score, curr_depth) {
+  if (req.body.turn > TIME_TO_AVOID_HEADS)
+    return score - curr_depth
+  return score
+}
+
 function transform_tail_chase_score(req, score, curr_depth) {
-  if (req.body.turn > TIME_TO_LOVE_TAILS)
+  if (req.body.turn > TIME_TO_CHASE_TAILS)
     return score + curr_depth + 5
   return score + 1
 }
@@ -171,6 +190,7 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
   if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
+  if (is_enemy_potential_move(req, curr_coord)) score.s = transform_head_avoid_score(req, score.s, curr_depth)
 
   if (curr_depth <= 0) return
 
