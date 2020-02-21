@@ -152,7 +152,7 @@ function transform_head_avoid_score(req, score, curr_depth) {
 
 function transform_tail_chase_score(req, score, curr_depth) {
   if (req.body.turn > TIME_TO_CHASE_TAILS)
-    return score + curr_depth + 5
+    return score + curr_depth
   return score + 1
 }
 
