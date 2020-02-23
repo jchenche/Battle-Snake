@@ -113,14 +113,16 @@ function is_current_tail(req, curr_coord) {
   return false
 }
 
-function is_enemy_potential_move(req, curr_coord) {
+function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
-  var snakes = req.body.board.snakes
+  var my_length = req.body.you.body.length
+  var enemy_length
   for (let future of futures) {
-    for (let snake of snakes) {
-      var snake_body = snake.body
-      if (stringify(future) == stringify([snake_body[0].x, snake_body[0].y]))
+    if (stringify(future) in obstacles_coord) {
+      enemy_length = obstacles_coord[stringify(future)]
+      if (typeof enemy_length == "number" && enemy_length > my_length) { // type number means it's a snake head
         return true
+      }
     }
   }
   return false
@@ -190,7 +192,8 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
   if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
   if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
-  if (is_enemy_potential_move(req, curr_coord)) score.s = transform_head_avoid_score(req, score.s, curr_depth)
+  if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord))
+    score.s = transform_head_avoid_score(req, score.s, curr_depth)
 
   if (curr_depth <= 0) return
 
