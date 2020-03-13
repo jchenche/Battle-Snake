@@ -1,80 +1,28 @@
-# starter-snake-node(js)
+# Design of the snake:
+- It is a model that assigns scores to every move and chooses the best one.
+- Parameter tweaking can heavily affect the behaviour of the snake.
+- Stage 1 filters moves that will hit an obstacle.
+- Stage 2 assigns scores for every move based on a local search.
+- Stage 3 assigns scores for every move based on a global search with a depth limit.
+- The snake eats aggresively until it gets too big.
+- In late games, the snake chases tails and avoids bigger snake heads aggressively.
 
-A simple [Battlesnake AI](https://battlesnake.io) written in Javascript for NodeJS.
+## Local Search:
+- Decrements the score by 1 for every immediate obstacles.
+- Transforms the score based on immediate foods, rewarding heavily if it's not time to diet or it's starving.
+- Transforms the score based on immediate enemies, penalizing heavily if the enemy is not smaller.
+- The snake uses this search mainly to avoid getting killed by enemies.
 
-To get started you'll need a working NodeJS development environment, and at least read the Heroku docs on [deploying a NodeJS app](https://devcenter.heroku.com/articles/getting-started-with-nodejs).
+## Global Search:
+- Does a BFS with as many steps as the depth limit, which is a non-decreasing function of the game turn.
+- Increments the score by 1 for every non-obstacle space explored.
+- Transforms the score based on the number of foods explored, rewarding heavily if it's close.
+- Transforms the score based on the number of current tails explored, rewarding heavily if it's close.
+- Transforms the score based on the number of spaces with nearby bigger snake heads explored, penalizing heavily if it's close.
+- The snake uses this search mainly to avoid going into dead ends.
 
-If you haven't setup a NodeJS development environment before, read [how to get started with NodeJS](http://nodejs.org/documentation/tutorials/). You'll also need [npm](https://www.npmjs.com/) for easy JS dependency management.
-
-This client uses [Express4](http://expressjs.com/en/4x/api.html) for easy route management, read up on the docs to learn more about reading incoming JSON params, writing responses, etc.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
-
-## Running the AI locally
-
-Fork and clone this repo:
-
-```shell
-git clone git@github.com:battlesnakeio/starter-snake-node.git
-cd battlesnake-node
-```
-
-Install the client dependencies:
-
-```shell
-npm install
-```
-
-Create an `.env` file in the root of the project and add your environment variables (optional).
-
-Run the server with auto-reloading on file change:
-
-```shell
-npm start
-```
-
-Test the client in your browser at <http://localhost:5000>
-
-## Deploying to Heroku
-
-Click the Deploy to Heroku button at the top or use the command line commands below.
-
-Create a new NodeJS Heroku app:
-
-```shell
-heroku create [APP_NAME]
-```
-
-Push code to Heroku servers:
-
-```shell
-git push heroku master
-```
-
-Open Heroku app in browser:
-
-```shell
-heroku open
-```
-
-Or go directly via <http://APP_NAME.herokuapp.com>
-
-View/stream server logs:
-
-```shell
-heroku logs --tail
-```
-
-## Deploying to [Zeit](https://zeit.co/)
-
-Install the now cli and sign up for a [zeit account](https://zeit.co/docs/v1/getting-started/introduction-to-now/).
-
-Deploying is simply:
-
-```shell
-now
-```
-
-## Questions
-
-Email [hello@battlesnake.com](mailto:hello@battlesnake.com), or tweet [@battlesnakeio](http://twitter.com/battlesnakeio).
+## Notes:
+- When doing a global search,
+    assigning food and tail chase scores based on proximity is only extreme when a move gets the snake into
+    a position where the area ahead is unreachable by other moves;
+    otherwise, the assigned score difference is at most 4 among moves.
