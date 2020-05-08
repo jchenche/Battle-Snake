@@ -4,3 +4,10 @@ node_js:
 script:
   - "npm run lint"
 
+before_deploy: "echo 'ready to deploy?'"
+
+deploy:
+  provider: heroku
+  api_key:
+    secure: "eJGlPoW4ZvpbvELpJgvjLrkhewuW5RwPKXF7uForvoTnGehz2dEHeWY1IduAwfPafpil9zzWWaPgTFmLALV2HkdVSvyHwSqImePcXEFgFZUuz3tdYX9e+nBtnFv/mpC2rYQZlXDY8wGtDuQMsort9pySgdme2+l7nYdPKfrZ2ehc1TcEBYaJCYr1EyMKuYpDkBCbCpdktDeDUpSJNqpKIt9HPFeUE+eH90SYGvx/f80uA0055uwrwNRm0Rcfna6L4XBfwaO+RYOmQ/hBndr8CwBeQqVUX5jYrrrLKCNciryj9l+5jo8+0tp6wr3OOQtaU143ZdFO9u3Ohw1Lchjv3EIknxGmAaeguq3ZY0LPH+vSe/H8aZXZUTLNmdeqUCFao8fyXRixwSOv4bzDJR0yMKMEktGtxwD/khxWEqb85VPA9M//HgqBGUInPnVME276Kdn92/8BVgW732r7LgrUm7BskyWb8R/M0ti1hECflDDewueIR+KrVYrAdwRFFlq3n2EXWzKWGNylB1W4GYjTDyc5abP3wqz+67qjZSTnEWCyamEA54memSbZP8mMGIBLdG7M/Y8CTyz16HF8LkK2o4B0P+4pHlVQ6luqXlrC/V0oxUgHL4OL8e2MSbCKAyPI4C+qMpS/8il+oF3dMGvzkLJn1pkJ4uBDDh+JpuCSCD4="
+  app: snakes-lair
