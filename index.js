@@ -57,13 +57,14 @@ const get_east = (coord) => { return [coord[0] + 1, coord[1]] }
 
 function get_obstacles_coord(req) {
   var coord = {}
+  var i;
 
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
     // Use a number to encode the snake's length and indicate that it's a snake head (by being a type number)
     coord[stringify([snake_body[0].x, snake_body[0].y])] = snake_body.length
-    for (var i = 1; i < snake_body.length - 2; i++) {
+    for (i = 1; i < snake_body.length - 2; i++) {
       coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
     }
     // If a snake ate, its body size in the next turn will be incremented by 1 and
