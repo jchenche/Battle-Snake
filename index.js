@@ -75,11 +75,11 @@ function get_obstacles_coord(req) {
 
   var x_max = req.body.board.width
   var y_max = req.body.board.height
-  for (var i = 0; i < x_max; i++) {
+  for (i = 0; i < x_max; i++) {
     coord[stringify([i, -1])] = "wall" // Top wall
     coord[stringify([i, y_max])] = "wall" // Bottom wall
   }
-  for (var i = 0; i < y_max; i++) {
+  for (i = 0; i < y_max; i++) {
     coord[stringify([-1, i])] = "wall" // Left wall
     coord[stringify([x_max, i])] = "wall" // Right wall
   }
