@@ -130,8 +130,8 @@ function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
 }
 
 const DEPTH_PARAMETER_DIVISOR = 15
-const HEALTH_THRESHOLD = 25
-const SIZE_TO_DIET = 15
+const HEALTH_THRESHOLD = 30
+const SIZE_TO_DIET = 30
 const TIME_TO_AVOID_HEADS = 50
 const TIME_TO_CHASE_TAILS = 100
 
