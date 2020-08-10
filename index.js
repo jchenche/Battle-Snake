@@ -143,7 +143,7 @@ function transform_battle_score(enemy_length, my_length, score) {
 
 function transform_food_score(req, score, curr_depth = 0) {
   if (req.body.you.body.length < SIZE_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
-    return score + curr_depth + 10
+    return score + curr_depth + 5
   return score + 1
 }
 
@@ -181,6 +181,8 @@ function local_space_score(req, obstacles_coord, foods_coord, move) {
       score = transform_food_score(req, score)
     }
   }
+
+  if (stringify(move_pos) in foods_coord) score = transform_food_score(req, score)
 
   return score
 }
