@@ -1,3 +1,7 @@
+# My highest global ranking (top 12%):
+
+![](rank.png)
+
 # Design of the snake:
 - It is a model that assigns scores to every move and chooses the best one.
 - Parameter tweaking can heavily affect the behaviour of the snake.
