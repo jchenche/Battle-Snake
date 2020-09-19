@@ -21,13 +21,19 @@ app.use(poweredByHandler)
 
 // --- SNAKE LOGIC GOES BELOW THIS LINE ---
 
-app.post('/start', (request, response) => {
+app.get('/', (request, response) => {
   const data = {
+    "apiversion": "1",
+    "author": "Jimmy",
     "color": '#0F52BA',
-    "headType": "bwc-snowman",
-    "tailType": "bwc-bonhomme"
+    "head": "bwc-snowman",
+    "tail": "bwc-bonhomme"
   }
   return response.json(data)
+})
+
+app.post('/start', (request, response) => {
+  return response.json({});
 })
 
 function shuffle_array(arr) {
@@ -42,17 +48,17 @@ function shuffle_array(arr) {
 }
 
 function get_move_pos(x_head, y_head, move) {
-  if (move == "up") return [x_head, y_head - 1]
+  if (move == "up") return [x_head, y_head + 1]
   else if (move == "left") return [x_head - 1, y_head]
-  else if (move == "down") return [x_head, y_head + 1]
+  else if (move == "down") return [x_head, y_head - 1]
   else return [x_head + 1, y_head]
 }
 
 const stringify = (coord) => { return coord[0].toString() + "," + coord[1].toString() }
 
-const get_north = (coord) => { return [coord[0], coord[1] - 1] }
+const get_north = (coord) => { return [coord[0], coord[1] + 1] }
 const get_west = (coord) => { return [coord[0] - 1, coord[1]] }
-const get_south = (coord) => { return [coord[0], coord[1] + 1] }
+const get_south = (coord) => { return [coord[0], coord[1] - 1] }
 const get_east = (coord) => { return [coord[0] + 1, coord[1]] }
 
 function get_obstacles_coord(req) {
@@ -77,8 +83,8 @@ function get_obstacles_coord(req) {
   var x_max = req.body.board.width
   var y_max = req.body.board.height
   for (i = 0; i < x_max; i++) {
-    coord[stringify([i, -1])] = "wall" // Top wall
-    coord[stringify([i, y_max])] = "wall" // Bottom wall
+    coord[stringify([i, -1])] = "wall" // Bottom wall
+    coord[stringify([i, y_max])] = "wall" // Top wall
   }
   for (i = 0; i < y_max; i++) {
     coord[stringify([-1, i])] = "wall" // Left wall
@@ -260,10 +266,6 @@ app.post('/move', (req, res) => {
 
 app.post('/end', (request, response) => {
   return response.json({})
-})
-
-app.post('/ping', (request, response) => {
-  return response.json({});
 })
 
 // --- SNAKE LOGIC GOES ABOVE THIS LINE ---
