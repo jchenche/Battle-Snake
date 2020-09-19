@@ -155,7 +155,7 @@ function transform_food_score(req, score, curr_depth = 0) {
 
 function transform_head_avoid_score(req, score, curr_depth) {
   if (req.body.turn > TIME_TO_AVOID_HEADS)
-    return score - Math.sqrt(curr_depth)
+    return score - curr_depth
   return score
 }
 
