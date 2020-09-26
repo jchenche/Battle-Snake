@@ -188,7 +188,8 @@ function local_space_score(req, obstacles_coord, foods_coord, move) {
     }
   }
 
-  if (stringify(move_pos) in foods_coord) score = transform_food_score(req, score)
+  if (!is_bigger_enemy_potential_move(req, obstacles_coord, move_pos) && stringify(move_pos) in foods_coord)
+    score = transform_food_score(req, score)
 
   return score
 }
