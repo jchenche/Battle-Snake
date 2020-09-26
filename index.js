@@ -135,9 +135,9 @@ function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
   return false
 }
 
-const DEPTH_PARAMETER_DIVISOR = process.env.DEPTH_PARAMETER_DIVISOR || 15
-const HEALTH_THRESHOLD = process.env.HEALTH_THRESHOLD || 25
-const SIZE_TO_DIET = process.env.SIZE_TO_DIET || 15
+const DEPTH_PARAMETER_DIVISOR = process.env.DEPTH_PARAMETER_DIVISOR || 10
+const HEALTH_THRESHOLD = process.env.HEALTH_THRESHOLD || 30
+const SIZE_TO_DIET = process.env.SIZE_TO_DIET || 30
 const TIME_TO_AVOID_HEADS = process.env.TIME_TO_AVOID_HEADS || 50
 const TIME_TO_CHASE_TAILS = process.env.TIME_TO_CHASE_TAILS || 100
 
