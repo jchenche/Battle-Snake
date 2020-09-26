@@ -1,4 +1,4 @@
-# My highest global ranking (top 12%):
+# My highest global ranking (top 10%):
 
 ![](rank.png)
 
