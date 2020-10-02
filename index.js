@@ -121,13 +121,17 @@ function is_current_tail(req, curr_coord) {
 }
 
 function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
+  return is_enemy_potential_move(req, obstacles_coord, curr_coord, (enemy_length, my_length) => enemy_length > my_length)
+}
+
+function is_enemy_potential_move(req, obstacles_coord, curr_coord, modifier = (x, y) => {x; y; return true;}) {
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
   var my_length = req.body.you.body.length
   var enemy_length
   for (let future of futures) {
     if (stringify(future) in obstacles_coord) {
       enemy_length = obstacles_coord[stringify(future)]
-      if (typeof enemy_length == "number" && enemy_length > my_length) { // type number means it's a snake head
+      if (typeof enemy_length == "number" && modifier(enemy_length, my_length)) { // type number means it's a snake head
         return true
       }
     }
@@ -211,7 +215,9 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   for (let future of futures) {
     var stringed_future = stringify(future)
-    if (!(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
+    if (!(stringed_future in marked) &&
+        !(stringed_future in obstacles_coord) &&
+        !is_enemy_potential_move(req, obstacles_coord, future)) {
       marked[stringed_future] = "marked"
       queue.push([future, curr_depth - 1])
     }
@@ -255,7 +261,7 @@ function get_best_move(req, obstacles_coord, foods_coord) {
 
 app.post('/move', (req, res) => {
   const data = {
-    move: "up", // coordinate (0,0) is at the upper left corner
+    move: "up"
   }
 
   var obstacles_coord = get_obstacles_coord(req)
