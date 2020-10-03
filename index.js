@@ -187,7 +187,7 @@ function local_space_score(req, obstacles_coord, foods_coord, move) {
       if (typeof enemy_length == "number") { // type number means it's a snake head
         score = transform_battle_score(enemy_length, my_length, score)
       }
-    } else if (stringify(future) in foods_coord) {
+    } else if (!is_bigger_enemy_potential_move(req, obstacles_coord, future) && stringify(future) in foods_coord) {
       score = transform_food_score(req, score)
     }
   }
