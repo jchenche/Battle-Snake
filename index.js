@@ -147,7 +147,7 @@ const TIME_TO_CHASE_TAILS = process.env.TIME_TO_CHASE_TAILS || 100
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
-    return score - 15
+    return score - 20
   return score + 1
 }
 
