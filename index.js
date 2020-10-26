@@ -145,6 +145,8 @@ const SIZE_TO_DIET = process.env.SIZE_TO_DIET || 30
 const TIME_TO_AVOID_HEADS = process.env.TIME_TO_AVOID_HEADS || 50
 const TIME_TO_CHASE_TAILS = process.env.TIME_TO_CHASE_TAILS || 100
 
+const get_init_depth = (req) => { return Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR) }
+
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
     return score - 20
@@ -187,12 +189,12 @@ function local_space_score(req, obstacles_coord, foods_coord, move) {
       if (typeof enemy_length == "number") { // type number means it's a snake head
         score = transform_battle_score(enemy_length, my_length, score)
       }
-    } else if (!is_bigger_enemy_potential_move(req, obstacles_coord, future) && stringify(future) in foods_coord) {
+    } else if (stringify(future) in foods_coord && !is_bigger_enemy_potential_move(req, obstacles_coord, future)) {
       score = transform_food_score(req, score)
     }
   }
 
-  if (!is_bigger_enemy_potential_move(req, obstacles_coord, move_pos) && stringify(move_pos) in foods_coord)
+  if (stringify(move_pos) in foods_coord && !is_bigger_enemy_potential_move(req, obstacles_coord, move_pos))
     score = transform_food_score(req, score)
 
   return score
@@ -209,15 +211,14 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord))
     score.s = transform_head_avoid_score(req, score.s, curr_depth)
 
-  if (curr_depth <= 0) return
+  if ((curr_depth != get_init_depth(req) && is_enemy_potential_move(req, obstacles_coord, curr_coord)) || curr_depth <= 0)
+    return
 
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
   for (let future of futures) {
     var stringed_future = stringify(future)
-    if (!(stringed_future in marked) &&
-        !(stringed_future in obstacles_coord) &&
-        !is_enemy_potential_move(req, obstacles_coord, future)) {
+    if (!(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
       marked[stringed_future] = "marked"
       queue.push([future, curr_depth - 1])
     }
@@ -231,7 +232,7 @@ function global_space_score(req, obstacles_coord, foods_coord, move) {
   var y_head = req.body.you.body[0].y
   var move_pos = get_move_pos(x_head, y_head, move)
 
-  var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
+  var depth = get_init_depth(req)
   var queue = [[move_pos, depth]] // List of (coord, depth) pairs
 
   var marked = {}
