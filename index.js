@@ -206,10 +206,12 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   var curr_depth = curr[1]
 
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
-  if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
-  if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
-  if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord))
+  if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord)) {
     score.s = transform_head_avoid_score(req, score.s, curr_depth)
+  } else {
+    if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
+    if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
+  }
 
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
