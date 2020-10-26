@@ -211,16 +211,15 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord))
     score.s = transform_head_avoid_score(req, score.s, curr_depth)
 
-  if ((curr_depth != get_init_depth(req) && is_enemy_potential_move(req, obstacles_coord, curr_coord)) || curr_depth <= 0)
-    return
-
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
-  for (let future of futures) {
-    var stringed_future = stringify(future)
-    if (!(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
-      marked[stringed_future] = "marked"
-      queue.push([future, curr_depth - 1])
+  if (curr_depth == get_init_depth(req) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
+    for (let future of futures) {
+      var stringed_future = stringify(future)
+      if ((curr_depth > 0) && !(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
+        marked[stringed_future] = "marked"
+        queue.push([future, curr_depth - 1])
+      }
     }
   }
 
