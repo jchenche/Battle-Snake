@@ -149,14 +149,14 @@ const get_init_depth = (req) => { return Math.ceil(req.body.turn / DEPTH_PARAMET
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
-    return score - 20
-  return score + 1
+    return score - 15
+  return score + 5
 }
 
 function transform_food_score(req, score, curr_depth = 0) {
   if (req.body.you.body.length < SIZE_TO_DIET || req.body.you.health < HEALTH_THRESHOLD)
     return score + curr_depth + 5
-  return score + 1
+  return score
 }
 
 function transform_head_avoid_score(req, score, curr_depth) {
