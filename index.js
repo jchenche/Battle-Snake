@@ -120,6 +120,17 @@ function is_current_tail(req, curr_coord) {
   return false
 }
 
+function is_current_edge(obstacles_coord, curr_coord) {
+  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
+  for (let future of futures) {
+    stringed_future = stringify(future)
+    if (stringed_future in obstacles_coord && obstacles_coord[stringed_future] == "wall") {
+      return true
+    }
+  }
+  return false
+}
+
 function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
   return is_enemy_potential_move(req, obstacles_coord, curr_coord, (enemy_length, my_length) => enemy_length > my_length)
 }
@@ -144,8 +155,6 @@ const HEALTH_THRESHOLD = process.env.HEALTH_THRESHOLD || 30
 const SIZE_TO_DIET = process.env.SIZE_TO_DIET || 30
 const TIME_TO_AVOID_HEADS = process.env.TIME_TO_AVOID_HEADS || 50
 const TIME_TO_CHASE_TAILS = process.env.TIME_TO_CHASE_TAILS || 100
-
-const get_init_depth = (req) => { return Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR) }
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
@@ -215,7 +224,7 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
-  if (curr_depth == get_init_depth(req) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
+  if (!is_current_edge(obstacles_coord, curr_coord) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
     for (let future of futures) {
       var stringed_future = stringify(future)
       if ((curr_depth > 0) && !(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
@@ -233,7 +242,7 @@ function global_space_score(req, obstacles_coord, foods_coord, move) {
   var y_head = req.body.you.body[0].y
   var move_pos = get_move_pos(x_head, y_head, move)
 
-  var depth = get_init_depth(req)
+  var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
   var queue = [[move_pos, depth]] // List of (coord, depth) pairs
 
   var marked = {}
