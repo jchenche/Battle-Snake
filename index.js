@@ -149,8 +149,8 @@ const get_init_depth = (req) => { return Math.ceil(req.body.turn / DEPTH_PARAMET
 
 function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length >= my_length)
-    return score - 15
-  return score + 5
+    return score - 20
+  return score
 }
 
 function transform_food_score(req, score, curr_depth = 0) {
