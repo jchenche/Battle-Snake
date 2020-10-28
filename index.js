@@ -215,7 +215,7 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
 
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
-  if ((get_init_depth(req) - curr_depth) <= 2 || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
+  if (curr_depth == get_init_depth(req) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
     for (let future of futures) {
       var stringed_future = stringify(future)
       if ((curr_depth > 0) && !(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
