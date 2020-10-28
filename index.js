@@ -123,12 +123,18 @@ function is_current_tail(req, curr_coord) {
 function is_current_edge(obstacles_coord, curr_coord) {
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
   for (let future of futures) {
-    stringed_future = stringify(future)
-    if (stringed_future in obstacles_coord && obstacles_coord[stringed_future] == "wall") {
+    var stringed_future = stringify(future)
+    if (stringed_future in obstacles_coord && obstacles_coord[stringed_future] == "wall")
       return true
-    }
   }
   return false
+}
+
+function is_current_my_head(req, curr_coord) {
+  var x_head = req.body.you.body[0].x
+  var y_head = req.body.you.body[0].y
+  var my_head_coord = [x_head, y_head]
+  return stringify(curr_coord) == stringify(my_head_coord)
 }
 
 function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
@@ -140,7 +146,7 @@ function is_enemy_potential_move(req, obstacles_coord, curr_coord, modifier = (x
   var my_length = req.body.you.body.length
   var enemy_length
   for (let future of futures) {
-    if (stringify(future) in obstacles_coord) {
+    if (stringify(future) in obstacles_coord && !is_current_my_head(req, future)) {
       enemy_length = obstacles_coord[stringify(future)]
       if (typeof enemy_length == "number" && modifier(enemy_length, my_length)) { // type number means it's a snake head
         return true
@@ -192,7 +198,7 @@ function local_space_score(req, obstacles_coord, foods_coord, move) {
   var enemy_length
 
   for (let future of futures) {
-    if (stringify(future) in obstacles_coord) {
+    if (stringify(future) in obstacles_coord && !is_current_my_head(req, future)) {
       score -= 1 // Decrement score by 1 for every immediate obstacle
       enemy_length = obstacles_coord[stringify(future)]
       if (typeof enemy_length == "number") { // type number means it's a snake head
