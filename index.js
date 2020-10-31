@@ -233,7 +233,9 @@ function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
   if (!is_current_edge(obstacles_coord, curr_coord) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
     for (let future of futures) {
       var stringed_future = stringify(future)
-      if ((curr_depth > 0) && !(stringed_future in marked) && !(stringed_future in obstacles_coord)) {
+      if ((curr_depth > 0) &&
+          !(stringed_future in marked) &&
+          !(stringed_future in obstacles_coord && obstacles_coord[stringed_future] != "tail")) {
         marked[stringed_future] = "marked"
         queue.push([future, curr_depth - 1])
       }
