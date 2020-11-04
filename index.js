@@ -163,8 +163,10 @@ const TIME_TO_AVOID_HEADS = process.env.TIME_TO_AVOID_HEADS || 30
 const TIME_TO_CHASE_TAILS = process.env.TIME_TO_CHASE_TAILS || 50
 
 function transform_battle_score(enemy_length, my_length, score) {
-  if (enemy_length >= my_length)
+  if (enemy_length > my_length)
     return score - 20
+  if (enemy_length == my_length)
+    return score - 5
   return score
 }
 
