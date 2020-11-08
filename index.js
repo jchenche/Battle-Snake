@@ -166,7 +166,7 @@ function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length > my_length)
     return score - 20
   if (enemy_length == my_length)
-    return score - 5
+    return score - 15
   return score
 }
 
