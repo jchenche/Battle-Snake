@@ -37,7 +37,7 @@ app.post('/start', (request, response) => {
 })
 
 function shuffle_array(arr) {
-  var i, j, temp
+  let i, j, temp
   for (i = arr.length - 1; i > 0; i--) {
     j = Math.floor(Math.random() * (i + 1))
     temp = arr[i]
@@ -69,11 +69,11 @@ let edges_coord
 let foods_coord
 
 function set_obstacles_coord(req) {
-  var i;
+  let i;
 
-  var snakes = req.body.board.snakes
+  let snakes = req.body.board.snakes
   for (let snake of snakes) {
-    var snake_body = snake.body
+    let snake_body = snake.body
 
     set_heads_coord([snake_body[0].x, snake_body[0].y], snake_body.length)
     set_enemy_potential_moves_coord(req, [snake_body[0].x, snake_body[0].y], snake_body.length)
@@ -88,8 +88,8 @@ function set_obstacles_coord(req) {
     set_current_tails_coord([snake_body[snake_body.length - 1].x, snake_body[snake_body.length - 1].y])
   }
 
-  var x_max = req.body.board.width
-  var y_max = req.body.board.height
+  let x_max = req.body.board.width
+  let y_max = req.body.board.height
   for (i = 0; i < x_max; i++) {
     obstacles_coord[stringify([i, -1])] = "wall" // Bottom wall
     set_edges_coord([i, -1])
@@ -110,9 +110,9 @@ function set_heads_coord(head_coord, snake_length) {
 
 function set_enemy_potential_moves_coord(req, head_coord, snake_length) {
   if (is_my_head(req, head_coord)) return
-  var futures = [get_north(head_coord), get_west(head_coord), get_south(head_coord), get_east(head_coord)]
+  let futures = [get_north(head_coord), get_west(head_coord), get_south(head_coord), get_east(head_coord)]
   for (let future of futures) {
-    var stringed_future = stringify(future)
+    let stringed_future = stringify(future)
     if (stringed_future in enemy_potential_moves_coord)
       enemy_potential_moves_coord[stringed_future] = Math.max(enemy_potential_moves_coord[stringed_future], snake_length)
     else
@@ -125,27 +125,27 @@ function set_current_tails_coord(current_tail_coord) {
 }
 
 function set_edges_coord(wall_coord) {
-  var futures = [get_north(wall_coord), get_west(wall_coord), get_south(wall_coord), get_east(wall_coord)]
+  let futures = [get_north(wall_coord), get_west(wall_coord), get_south(wall_coord), get_east(wall_coord)]
   for (let future of futures) edges_coord[stringify(future)] = "edge"
 }
 
 function set_foods_coord(req) {
-  var foods = req.body.board.food
+  let foods = req.body.board.food
   for (let food of foods) foods_coord[stringify([food.x, food.y])] = "food"
 }
 
 function is_legal_move(req, move) {
   // Make sure it doesn't eat itself and collide with obstacles
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-  var move_pos = get_move_pos(x_head, y_head, move)
+  let x_head = req.body.you.body[0].x
+  let y_head = req.body.you.body[0].y
+  let move_pos = get_move_pos(x_head, y_head, move)
   return !(stringify(move_pos) in obstacles_coord)
 }
 
 function is_my_head(req, curr_coord) {
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-  var my_head_coord = [x_head, y_head]
+  let x_head = req.body.you.body[0].x
+  let y_head = req.body.you.body[0].y
+  let my_head_coord = [x_head, y_head]
   return stringify(curr_coord) == stringify(my_head_coord)
 }
 
@@ -202,13 +202,13 @@ function transform_tail_chase_score(req, score, curr_depth) {
 }
 
 function local_space_score(req, move) {
-  var score = 0
+  let score = 0
 
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-  var move_pos = get_move_pos(x_head, y_head, move)
-  var futures = [get_north(move_pos), get_west(move_pos), get_south(move_pos), get_east(move_pos)]
-  var my_length = req.body.you.body.length
+  let x_head = req.body.you.body[0].x
+  let y_head = req.body.you.body[0].y
+  let move_pos = get_move_pos(x_head, y_head, move)
+  let futures = [get_north(move_pos), get_west(move_pos), get_south(move_pos), get_east(move_pos)]
+  let my_length = req.body.you.body.length
 
   for (let future of futures) {
     if (stringify(future) in obstacles_coord && !is_my_head(req, future)) {
@@ -225,9 +225,9 @@ function local_space_score(req, move) {
 }
 
 function limited_BFS(req, queue, marked, score) {
-  var curr = queue.shift()
-  var curr_coord = curr[0]
-  var curr_depth = curr[1]
+  let curr = queue.shift()
+  let curr_coord = curr[0]
+  let curr_depth = curr[1]
 
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
   if (is_bigger_enemy_potential_move(req.body.you.body.length, curr_coord)) {
@@ -237,11 +237,11 @@ function limited_BFS(req, queue, marked, score) {
     if (is_current_tail(curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
   }
 
-  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
+  let futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
   if (!is_edge(curr_coord) || !is_enemy_potential_move(curr_coord)) {
     for (let future of futures) {
-      var stringed_future = stringify(future)
+      let stringed_future = stringify(future)
       if ((curr_depth > 0) &&
           !(stringed_future in marked) &&
           !(stringed_future in obstacles_coord && obstacles_coord[stringed_future] != "future_tail")) {
@@ -255,23 +255,23 @@ function limited_BFS(req, queue, marked, score) {
 }
 
 function global_space_score(req, move) {
-  var x_head = req.body.you.body[0].x
-  var y_head = req.body.you.body[0].y
-  var move_pos = get_move_pos(x_head, y_head, move)
+  let x_head = req.body.you.body[0].x
+  let y_head = req.body.you.body[0].y
+  let move_pos = get_move_pos(x_head, y_head, move)
 
-  var depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
-  var queue = [[move_pos, depth]] // List of (coord, depth) pairs
+  let depth = Math.ceil(req.body.turn / DEPTH_PARAMETER_DIVISOR)
+  let queue = [[move_pos, depth]] // List of (coord, depth) pairs
 
-  var marked = {}
+  let marked = {}
   marked[stringify(move_pos)] = "marked"
 
-  var score = { "s": 0 }
+  let score = { "s": 0 }
   limited_BFS(req, queue, marked, score)
   return score.s
 }
 
 function get_best_move(req) {
-  var moves = shuffle_array(["up", "left", "down", "right"])
+  let moves = shuffle_array(["up", "left", "down", "right"])
   moves = moves.map(move => [move, 0])
   moves = moves.filter(move => is_legal_move(req, move[0]))
   if (moves.length == 0) {
