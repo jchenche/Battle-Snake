@@ -61,47 +61,80 @@ const get_west = (coord) => { return [coord[0] - 1, coord[1]] }
 const get_south = (coord) => { return [coord[0], coord[1] - 1] }
 const get_east = (coord) => { return [coord[0] + 1, coord[1]] }
 
-function get_obstacles_coord(req) {
-  var coord = {}
+let obstacles_coord
+let heads_coord
+let enemy_potential_moves_coord
+let current_tails_coord
+let edges_coord
+let foods_coord
+
+function set_obstacles_coord(req) {
   var i;
 
   var snakes = req.body.board.snakes
   for (let snake of snakes) {
     var snake_body = snake.body
-    // Use a number to encode the snake's length and indicate that it's a snake head (by being a type number)
-    coord[stringify([snake_body[0].x, snake_body[0].y])] = snake_body.length
-    for (i = 1; i < snake_body.length - 2; i++) {
-      coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
-    }
+
+    set_heads_coord([snake_body[0].x, snake_body[0].y], snake_body.length)
+    set_enemy_potential_moves_coord(req, [snake_body[0].x, snake_body[0].y], snake_body.length)
+
+    for (i = 0; i < snake_body.length - 2; i++) obstacles_coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
     // If a snake ate, its body size in the next turn will be incremented by 1 and
     // the second last position will be on top of the last (grown) position
     // so that space will be successfully registered as an obstacle in this case.
     // Note that the tail below is a tail of the next turn and not the current turn.
-    coord[stringify([snake_body[snake_body.length - 2].x, snake_body[snake_body.length - 2].y])] = "tail"
+    obstacles_coord[stringify([snake_body[snake_body.length - 2].x, snake_body[snake_body.length - 2].y])] = "future_tail"
+
+    set_current_tails_coord([snake_body[snake_body.length - 1].x, snake_body[snake_body.length - 1].y])
   }
 
   var x_max = req.body.board.width
   var y_max = req.body.board.height
   for (i = 0; i < x_max; i++) {
-    coord[stringify([i, -1])] = "wall" // Bottom wall
-    coord[stringify([i, y_max])] = "wall" // Top wall
+    obstacles_coord[stringify([i, -1])] = "wall" // Bottom wall
+    set_edges_coord([i, -1])
+    obstacles_coord[stringify([i, y_max])] = "wall" // Top wall
+    set_edges_coord([i, y_max])
   }
   for (i = 0; i < y_max; i++) {
-    coord[stringify([-1, i])] = "wall" // Left wall
-    coord[stringify([x_max, i])] = "wall" // Right wall
+    obstacles_coord[stringify([-1, i])] = "wall" // Left wall
+    set_edges_coord([-1, i])
+    obstacles_coord[stringify([x_max, i])] = "wall" // Right wall
+    set_edges_coord([x_max, i])
   }
-
-  return coord
 }
 
-function get_foods_coord(req) {
-  var coord = {}
+function set_heads_coord(head_coord, snake_length) {
+  heads_coord[stringify(head_coord)] = snake_length
+}
+
+function set_enemy_potential_moves_coord(req, head_coord, snake_length) {
+  if (is_my_head(req, head_coord)) return
+  var futures = [get_north(head_coord), get_west(head_coord), get_south(head_coord), get_east(head_coord)]
+  for (let future of futures) {
+    var stringed_future = stringify(future)
+    if (stringed_future in enemy_potential_moves_coord)
+      enemy_potential_moves_coord[stringed_future] = Math.max(enemy_potential_moves_coord[stringed_future], snake_length)
+    else
+      enemy_potential_moves_coord[stringed_future] = snake_length
+  }
+}
+
+function set_current_tails_coord(current_tail_coord) {
+  current_tails_coord[stringify(current_tail_coord)] = "current_tail"
+}
+
+function set_edges_coord(wall_coord) {
+  var futures = [get_north(wall_coord), get_west(wall_coord), get_south(wall_coord), get_east(wall_coord)]
+  for (let future of futures) edges_coord[stringify(future)] = "edge"
+}
+
+function set_foods_coord(req) {
   var foods = req.body.board.food
-  for (let food of foods) coord[stringify([food.x, food.y])] = "food"
-  return coord
+  for (let food of foods) foods_coord[stringify([food.x, food.y])] = "food"
 }
 
-function is_legal_move(req, obstacles_coord, move) {
+function is_legal_move(req, move) {
   // Make sure it doesn't eat itself and collide with obstacles
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
@@ -109,51 +142,31 @@ function is_legal_move(req, obstacles_coord, move) {
   return !(stringify(move_pos) in obstacles_coord)
 }
 
-function is_current_tail(req, curr_coord) {
-  var snakes = req.body.board.snakes
-  for (let snake of snakes) {
-    var snake_body = snake.body
-    var snake_length = snake_body.length
-    if (stringify(curr_coord) == stringify([snake_body[snake_length - 1].x, snake_body[snake_length - 1].y]))
-      return true
-  }
-  return false
-}
-
-function is_current_edge(obstacles_coord, curr_coord) {
-  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
-  for (let future of futures) {
-    var stringed_future = stringify(future)
-    if (stringed_future in obstacles_coord && obstacles_coord[stringed_future] == "wall")
-      return true
-  }
-  return false
-}
-
-function is_current_my_head(req, curr_coord) {
+function is_my_head(req, curr_coord) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
   var my_head_coord = [x_head, y_head]
   return stringify(curr_coord) == stringify(my_head_coord)
 }
 
-function is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord) {
-  return is_enemy_potential_move(req, obstacles_coord, curr_coord, (enemy_length, my_length) => enemy_length > my_length)
+function is_bigger_enemy_potential_move(my_length, curr_coord) {
+  return stringify(curr_coord) in enemy_potential_moves_coord && enemy_potential_moves_coord[stringify(curr_coord)] > my_length
 }
 
-function is_enemy_potential_move(req, obstacles_coord, curr_coord, modifier = (x, y) => {x; y; return true;}) {
-  var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
-  var my_length = req.body.you.body.length
-  var enemy_length
-  for (let future of futures) {
-    if (stringify(future) in obstacles_coord && !is_current_my_head(req, future)) {
-      enemy_length = obstacles_coord[stringify(future)]
-      if (typeof enemy_length == "number" && modifier(enemy_length, my_length)) { // type number means it's a snake head
-        return true
-      }
-    }
-  }
-  return false
+function is_enemy_potential_move(curr_coord) {
+  return stringify(curr_coord) in enemy_potential_moves_coord
+}
+
+function is_current_tail(curr_coord) {
+  return stringify(curr_coord) in current_tails_coord
+}
+
+function is_edge(curr_coord) {
+  return stringify(curr_coord) in edges_coord
+}
+
+function is_food(curr_coord) {
+  return stringify(curr_coord) in foods_coord
 }
 
 const DEPTH_PARAMETER_DIVISOR = process.env.DEPTH_PARAMETER_DIVISOR || 10
@@ -188,66 +201,60 @@ function transform_tail_chase_score(req, score, curr_depth) {
   return score
 }
 
-function local_space_score(req, obstacles_coord, foods_coord, move) {
+function local_space_score(req, move) {
   var score = 0
 
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
   var move_pos = get_move_pos(x_head, y_head, move)
   var futures = [get_north(move_pos), get_west(move_pos), get_south(move_pos), get_east(move_pos)]
-
   var my_length = req.body.you.body.length
-  var enemy_length
 
   for (let future of futures) {
-    if (stringify(future) in obstacles_coord && !is_current_my_head(req, future)) {
+    if (stringify(future) in obstacles_coord && !is_my_head(req, future)) {
       score -= 1 // Decrement score by 1 for every immediate obstacle
-      enemy_length = obstacles_coord[stringify(future)]
-      if (typeof enemy_length == "number") { // type number means it's a snake head
-        score = transform_battle_score(enemy_length, my_length, score)
-      }
-    } else if (stringify(future) in foods_coord && !is_bigger_enemy_potential_move(req, obstacles_coord, future)) {
+      if (stringify(future) in heads_coord) score = transform_battle_score(heads_coord[stringify(future)], my_length, score)
+    } else if (is_food(future) && !is_bigger_enemy_potential_move(my_length, future)) {
       score = transform_food_score(req, score)
     }
   }
 
-  if (stringify(move_pos) in foods_coord && !is_bigger_enemy_potential_move(req, obstacles_coord, move_pos))
-    score = transform_food_score(req, score)
+  if (is_food(move_pos) && !is_bigger_enemy_potential_move(my_length, move_pos)) score = transform_food_score(req, score)
 
   return score
 }
 
-function limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score) {
+function limited_BFS(req, queue, marked, score) {
   var curr = queue.shift()
   var curr_coord = curr[0]
   var curr_depth = curr[1]
 
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
-  if (is_bigger_enemy_potential_move(req, obstacles_coord, curr_coord)) {
+  if (is_bigger_enemy_potential_move(req.body.you.body.length, curr_coord)) {
     score.s = transform_head_avoid_score(req, score.s, curr_depth)
   } else {
-    if (stringify(curr_coord) in foods_coord) score.s = transform_food_score(req, score.s, curr_depth)
-    if (is_current_tail(req, curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
+    if (is_food(curr_coord)) score.s = transform_food_score(req, score.s, curr_depth)
+    if (is_current_tail(curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
   }
 
   var futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
-  if (!is_current_edge(obstacles_coord, curr_coord) || !is_enemy_potential_move(req, obstacles_coord, curr_coord)) {
+  if (!is_edge(curr_coord) || !is_enemy_potential_move(curr_coord)) {
     for (let future of futures) {
       var stringed_future = stringify(future)
       if ((curr_depth > 0) &&
           !(stringed_future in marked) &&
-          !(stringed_future in obstacles_coord && obstacles_coord[stringed_future] != "tail")) {
+          !(stringed_future in obstacles_coord && obstacles_coord[stringed_future] != "future_tail")) {
         marked[stringed_future] = "marked"
         queue.push([future, curr_depth - 1])
       }
     }
   }
 
-  if (queue.length > 0) limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score)
+  if (queue.length > 0) limited_BFS(req, queue, marked, score)
 }
 
-function global_space_score(req, obstacles_coord, foods_coord, move) {
+function global_space_score(req, move) {
   var x_head = req.body.you.body[0].x
   var y_head = req.body.you.body[0].y
   var move_pos = get_move_pos(x_head, y_head, move)
@@ -259,21 +266,21 @@ function global_space_score(req, obstacles_coord, foods_coord, move) {
   marked[stringify(move_pos)] = "marked"
 
   var score = { "s": 0 }
-  limited_BFS(req, queue, marked, obstacles_coord, foods_coord, score)
+  limited_BFS(req, queue, marked, score)
   return score.s
 }
 
-function get_best_move(req, obstacles_coord, foods_coord) {
+function get_best_move(req) {
   var moves = shuffle_array(["up", "left", "down", "right"])
   moves = moves.map(move => [move, 0])
-  moves = moves.filter(move => is_legal_move(req, obstacles_coord, move[0]))
+  moves = moves.filter(move => is_legal_move(req, move[0]))
   if (moves.length == 0) {
     console.log("====== No legal moves available ======")
     return "up"
   }
   
-  moves = moves.map(move => [move[0], move[1] + local_space_score(req, obstacles_coord, foods_coord, move[0])])
-  moves = moves.map(move => [move[0], move[1] + global_space_score(req, obstacles_coord, foods_coord, move[0])])
+  moves = moves.map(move => [move[0], move[1] + local_space_score(req, move[0])])
+  moves = moves.map(move => [move[0], move[1] + global_space_score(req, move[0])])
 
   moves.sort((a, b) => b[1] - a[1])
   console.log("Turn: " + req.body.turn + ". Move rankings ======> " + moves)
@@ -284,10 +291,15 @@ app.post('/move', (req, res) => {
   const data = {
     move: "up"
   }
-
-  var obstacles_coord = get_obstacles_coord(req)
-  var foods_coord = get_foods_coord(req)
-  data.move = get_best_move(req, obstacles_coord, foods_coord)
+  obstacles_coord = {}
+  heads_coord = {}
+  enemy_potential_moves_coord = {}
+  current_tails_coord = {}
+  edges_coord = {}
+  foods_coord = {}
+  set_obstacles_coord(req)
+  set_foods_coord(req)
+  data.move = get_best_move(req)
 
   return res.json(data)
 })
