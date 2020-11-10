@@ -78,7 +78,10 @@ function set_obstacles_coord(req) {
     set_heads_coord([snake_body[0].x, snake_body[0].y], snake_body.length)
     set_enemy_potential_moves_coord(req, [snake_body[0].x, snake_body[0].y], snake_body.length)
 
-    for (i = 0; i < snake_body.length - 2; i++) obstacles_coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
+    // The game is set up such that no snakes can run into each other unless they both decide to
+    // so snake heads don't need to be registered as an obstacle
+    for (i = 1; i < snake_body.length - 2; i++) obstacles_coord[stringify([snake_body[i].x, snake_body[i].y])] = "body"
+
     // If a snake ate, its body size in the next turn will be incremented by 1 and
     // the second last position will be on top of the last (grown) position
     // so that space will be successfully registered as an obstacle in this case.
@@ -157,6 +160,10 @@ function is_enemy_potential_move(curr_coord) {
   return stringify(curr_coord) in enemy_potential_moves_coord
 }
 
+function is_bigger_enemy_head(my_length, curr_coord) {
+  return stringify(curr_coord) in heads_coord && heads_coord[stringify(curr_coord)] > my_length
+}
+
 function is_current_tail(curr_coord) {
   return stringify(curr_coord) in current_tails_coord
 }
@@ -179,8 +186,8 @@ function transform_battle_score(enemy_length, my_length, score) {
   if (enemy_length > my_length)
     return score - 20
   if (enemy_length == my_length)
-    return score - 15
-  return score
+    return score - 10
+  return score + 5
 }
 
 function transform_food_score(req, score, curr_depth = 0) {
@@ -211,7 +218,7 @@ function local_space_score(req, move) {
   let my_length = req.body.you.body.length
 
   for (let future of futures) {
-    if (stringify(future) in obstacles_coord && !is_my_head(req, future)) {
+    if ((stringify(future) in obstacles_coord || stringify(future) in heads_coord) && !is_my_head(req, future)) {
       score -= 1 // Decrement score by 1 for every immediate obstacle
       if (stringify(future) in heads_coord) score = transform_battle_score(heads_coord[stringify(future)], my_length, score)
     } else if (is_food(future) && !is_bigger_enemy_potential_move(my_length, future)) {
@@ -228,18 +235,19 @@ function limited_BFS(req, queue, marked, score) {
   let curr = queue.shift()
   let curr_coord = curr[0]
   let curr_depth = curr[1]
+  let my_length = req.body.you.body.length
 
   score.s += 1 // Increment score by 1 for every non-obstacle space explored
-  if (is_bigger_enemy_potential_move(req.body.you.body.length, curr_coord)) {
+  if (is_bigger_enemy_head(my_length, curr_coord))
     score.s = transform_head_avoid_score(req, score.s, curr_depth)
-  } else {
-    if (is_food(curr_coord)) score.s = transform_food_score(req, score.s, curr_depth)
-    if (is_current_tail(curr_coord)) score.s = transform_tail_chase_score(req, score.s, curr_depth)
-  }
+  if (is_food(curr_coord) && !is_bigger_enemy_potential_move(my_length, curr_coord))
+    score.s = transform_food_score(req, score.s, curr_depth)
+  if (is_current_tail(curr_coord) && !is_bigger_enemy_potential_move(my_length, curr_coord))
+    score.s = transform_tail_chase_score(req, score.s, curr_depth)
 
   let futures = [get_north(curr_coord), get_west(curr_coord), get_south(curr_coord), get_east(curr_coord)]
 
-  if (!is_edge(curr_coord) || !is_enemy_potential_move(curr_coord)) {
+  if (!(stringify(curr_coord) in heads_coord || (is_edge(curr_coord) && is_enemy_potential_move(curr_coord)))) {
     for (let future of futures) {
       let stringed_future = stringify(future)
       if ((curr_depth > 0) &&
